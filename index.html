@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Safe AI Growth Engine — VoiceCare AI</title>
+  <meta name="description" content="A safe, ToS-compliant AI growth engine: LinkedIn content strategy, market intelligence, AI-search (GEO/AEO) visibility, growth reporting, citation authority, and conversion assets — research and drafting only, never automation." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">●</span>
+      <span class="brand-name">Safe AI Growth Engine</span>
+    </div>
+    <p class="brand-tagline">A safe AI operating console for LinkedIn growth, GEO/AEO/ASO visibility, competitor share of voice, citation authority, and conversion assets.</p>
+  </header>
+
+  <main class="layout">
+
+    <section class="panel profile" aria-labelledby="profile-heading">
+      <h2 id="profile-heading" class="eyebrow">COMPANY PROFILE</h2>
+      <p class="panel-subtitle">Works for any company — defaults below are filled in for VoiceCare AI as a demo.</p>
+
+      <div class="field-grid">
+        <label class="field">
+          <span>Company name</span>
+          <input type="text" id="f-companyName" value="VoiceCare AI" />
+        </label>
+
+        <label class="field">
+          <span>Website</span>
+          <input type="text" id="f-website" value="https://voicecare.ai" />
+        </label>
+
+        <label class="field field-wide">
+          <span>Industry / ICP (ideal customer profile)</span>
+          <input type="text" id="f-icp" value="Healthcare RCM and back-office teams at hospitals, health systems, and provider groups" />
+        </label>
+
+        <label class="field field-wide">
+          <span>Audience persona</span>
+          <input type="text" id="f-persona" value="VP of Revenue Cycle / Patient Access at a mid-to-large health system" />
+        </label>
+
+        <label class="field">
+          <span>Voice / tone</span>
+          <select id="f-tone">
+            <option value="confident, plain-spoken, evidence-led" selected>Confident, plain-spoken</option>
+            <option value="warm, mission-driven, plain-spoken">Warm, mission-driven</option>
+            <option value="technical, precise, builder-to-builder">Technical, builder-to-builder</option>
+            <option value="executive, concise, ROI-led">Executive, ROI-led</option>
+          </select>
+        </label>
+
+        <label class="field field-wide">
+          <span>Known competitors (comma-separated, optional)</span>
+          <input type="text" id="f-competitors" value="Notable Health, Infinitus Systems, Hippocratic AI, Ambience Healthcare" />
+        </label>
+
+        <label class="field">
+          <span>Current LinkedIn followers</span>
+          <input type="number" id="f-currentFollowers" value="2900" min="0" />
+        </label>
+
+        <label class="field">
+          <span>Follower goal</span>
+          <input type="number" id="f-followerGoal" value="10000" min="0" />
+        </label>
+
+        <label class="field">
+          <span>Days remaining</span>
+          <input type="number" id="f-daysRemaining" value="90" min="1" />
+        </label>
+      </div>
+
+      <div class="sprint-bar">
+        <button id="run-sprint-btn" class="btn btn-primary">Run full growth sprint</button>
+        <button id="sprint-download-btn" class="btn btn-small" style="display:none">Download combined pack</button>
+        <span id="sprint-status" class="sprint-status" role="status" aria-live="polite"></span>
+      </div>
+      <p class="sprint-hint">Runs all six agents in order, feeding Market Intelligence's findings into downstream agents. Each agent can also be run on its own below.</p>
+    </section>
+
+    <section class="console" id="console" aria-label="Agent console">
+      <!-- Agent cards are rendered here by app.js -->
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      No LinkedIn automation. No scraping. No auto-DMs. No fake engagement. No PHI. Human review required before publishing or outreach.
+      <br />
+      <a href="docs/PRD.md">PRD</a> · <a href="docs/DESIGN.md">Design</a> · <a href="docs/AGENT_FLOWS.md">Agent flows</a> · <a href="docs/VERCEL_ENV_SETUP.md">Setup</a>
+    </p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

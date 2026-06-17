@@ -1,0 +1,11 @@
+{
+  "name": "voicecare-growth-engine",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "VoiceCare AI Safe Growth Engine — A safe 6-agent AI operating console for LinkedIn growth, GEO/AEO/ASO visibility, competitor share of voice, citation authority, and conversion assets. No LinkedIn automation, no scraping, no PHI.",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}
