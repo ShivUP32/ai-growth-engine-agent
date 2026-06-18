@@ -56,6 +56,73 @@ async function searchWeb(query, apiKey) {
   return await response.text();
 }
 
+// Model mapping helper to translate Groq model names to OpenRouter equivalents
+function getOpenRouterModel(groqModel) {
+  const mappings = {
+    "llama-3.3-70b-versatile": "meta-llama/llama-3.3-70b-instruct",
+    "llama-3.1-8b-instant": "meta-llama/llama-3.1-8b-instruct",
+    "mixtral-8x7b-32768": "mistralai/mixtral-8x7b-instruct",
+  };
+  return mappings[groqModel] || "meta-llama/llama-3.3-70b-instruct";
+}
+
+// Call OpenRouter API
+async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens }) {
+  const endpoint = "https://openrouter.ai/api/v1/chat/completions";
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": "https://ai-growth-engine-agent.vercel.app",
+      "X-Title": "VoiceCare AI Safe Growth Engine",
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`HTTP ${response.status} from OpenRouter model "${model}": ${errorBody.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  const choice = data.choices && data.choices[0];
+  const content = choice && choice.message ? choice.message.content : "";
+
+  if (!content) {
+    throw new Error(`OpenRouter model "${model}" returned an empty response.`);
+  }
+
+  return { content };
+}
+
+// Helper wrapper to try Groq first, and if failed, try OpenRouter fallback
+async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, temperature, maxCompletionTokens }) {
+  try {
+    const res = await callGroq({ apiKey, model, messages, temperature, maxCompletionTokens });
+    return { content: res.content, provider: "Groq", model: model, executedTools: res.executedTools };
+  } catch (groqErr) {
+    console.error(`[Groq] Failed for model "${model}":`, groqErr.message);
+    if (!orApiKey) {
+      throw groqErr;
+    }
+    const orModel = getOpenRouterModel(model);
+    try {
+      console.log(`[OpenRouter] Falling back to OpenRouter model "${orModel}"`);
+      const res = await callOpenRouter({ apiKey: orApiKey, model: orModel, messages, temperature, maxTokens: maxCompletionTokens });
+      return { content: res.content, provider: "OpenRouter", model: `${orModel} (OpenRouter)` };
+    } catch (orErr) {
+      console.error(`[OpenRouter] Failed for model "${orModel}":`, orErr.message);
+      throw new Error(`Groq failed (${groqErr.message}) and OpenRouter failed (${orErr.message})`);
+    }
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -223,8 +290,9 @@ export default async function handler(req, res) {
       // Grounding succeeded, execute using fallbackModel as primary and mark fallbackUsed = false
       try {
         console.log(`[Model Route] Grounding succeeded. Running primary model: ${config.fallbackModel}`);
-        const primary = await callGroq({
+        const primary = await callGroqOrOpenRouter({
           apiKey,
+          orApiKey: process.env.OPENROUTER_API_KEY,
           model: config.fallbackModel,
           messages,
           temperature: config.temperature,
@@ -233,7 +301,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           markdown: primary.content,
-          model: config.fallbackModel,
+          model: primary.model,
           fallbackUsed: false,
           executedTools: executedTools,
         });
@@ -241,15 +309,16 @@ export default async function handler(req, res) {
         console.error(`[Model Route] Grounded model failed:`, primaryErr.message);
         return res.status(502).json({
           ok: false,
-          error: `Groq API error on grounded model "${config.fallbackModel}": ${primaryErr.message}`,
+          error: `API error on grounded model: ${primaryErr.message}`,
         });
       }
     } else {
       // Grounding failed or was bypassed, execute using fallbackModel and mark fallbackUsed = true
       try {
         console.log(`[Model Route] Grounding failed/bypassed. Running fallback model: ${config.fallbackModel}`);
-        const fallback = await callGroq({
+        const fallback = await callGroqOrOpenRouter({
           apiKey,
+          orApiKey: process.env.OPENROUTER_API_KEY,
           model: config.fallbackModel,
           messages,
           temperature: config.temperature,
@@ -258,7 +327,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           markdown: fallback.content,
-          model: config.fallbackModel,
+          model: fallback.model,
           fallbackUsed: true,
           executedTools: [],
           note: "Live web search was unavailable, so this used the model's existing knowledge only — verify recency manually.",
@@ -266,7 +335,7 @@ export default async function handler(req, res) {
       } catch (fallbackErr) {
         return res.status(502).json({
           ok: false,
-          error: `Groq API error on fallback model "${config.fallbackModel}" (search failed): ${fallbackErr.message}`,
+          error: `API error on fallback model (search failed): ${fallbackErr.message}`,
         });
       }
     }
@@ -290,12 +359,38 @@ export default async function handler(req, res) {
       });
     } catch (primaryErr) {
       if (!config.fallbackModel) {
+        if (process.env.OPENROUTER_API_KEY) {
+          try {
+            const orModel = getOpenRouterModel(config.model);
+            console.log(`[Model Route] Standard model failed. Running OpenRouter model: ${orModel}`);
+            const fallback = await callOpenRouter({
+              apiKey: process.env.OPENROUTER_API_KEY,
+              model: orModel,
+              messages,
+              temperature: config.temperature,
+              maxTokens: config.maxCompletionTokens,
+            });
+            return res.status(200).json({
+              ok: true,
+              markdown: fallback.content,
+              model: `${orModel} (OpenRouter)`,
+              fallbackUsed: true,
+              executedTools: [],
+            });
+          } catch (orErr) {
+            return res.status(502).json({
+              ok: false,
+              error: `Groq error (${primaryErr.message}) and OpenRouter error (${orErr.message})`,
+            });
+          }
+        }
         return res.status(502).json({ ok: false, error: `Groq API error: ${primaryErr.message}` });
       }
       try {
         console.log(`[Model Route] Standard model failed. Running fallback model: ${config.fallbackModel}`);
-        const fallback = await callGroq({
+        const fallback = await callGroqOrOpenRouter({
           apiKey,
+          orApiKey: process.env.OPENROUTER_API_KEY,
           model: config.fallbackModel,
           messages,
           temperature: config.temperature,
@@ -304,14 +399,14 @@ export default async function handler(req, res) {
         return res.status(200).json({
           ok: true,
           markdown: fallback.content,
-          model: config.fallbackModel,
+          model: fallback.model,
           fallbackUsed: true,
           executedTools: [],
         });
       } catch (fallbackErr) {
         return res.status(502).json({
           ok: false,
-          error: `Groq API error on both primary and fallback model: ${fallbackErr.message}`,
+          error: `API error on both primary and fallback models: ${fallbackErr.message}`,
         });
       }
     }
