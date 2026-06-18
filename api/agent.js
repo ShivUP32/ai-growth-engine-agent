@@ -18,6 +18,44 @@ import { AGENT_CONFIG } from "./prompts.js";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
+// Extract URLs from a string
+function extractUrls(str) {
+  if (!str) return [];
+  const urlRegex = /(https?:\/\/[^\s,;]+)/g;
+  return str.match(urlRegex) || [];
+}
+
+// Scrape a URL using Jina Reader
+async function scrapeUrl(url, apiKey) {
+  if (!url) return "";
+  const headers = {};
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
+  }
+  const response = await fetch(`https://r.jina.ai/${encodeURI(url)}`, { headers });
+  if (!response.ok) {
+    throw new Error(`Jina Reader returned status ${response.status}`);
+  }
+  return await response.text();
+}
+
+// Search using Jina Search
+async function searchWeb(query, apiKey) {
+  if (!query) return "";
+  if (!apiKey) {
+    throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
+  }
+  const response = await fetch(`https://s.jina.ai/${encodeURIComponent(query)}`, {
+    headers: {
+      "Authorization": `Bearer ${apiKey}`
+    }
+  });
+  if (!response.ok) {
+    throw new Error(`Jina Search returned status ${response.status}`);
+  }
+  return await response.text();
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -47,7 +85,6 @@ export default async function handler(req, res) {
 
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    // This should only happen if the env var was never set in Vercel.
     return res.status(500).json({
       ok: false,
       error:
@@ -56,56 +93,227 @@ export default async function handler(req, res) {
   }
 
   const config = AGENT_CONFIG[agentType];
-  const userPrompt = config.buildUserPrompt(companyProfile, agentInputs || {});
+  const jinaApiKey = process.env.JINA_API_KEY;
+
+  let scrapedPages = [];
+  let searchBlocks = [];
+  let jinaSucceeded = false;
+  const executedTools = [];
+
+  // 1. Run Jina search/scraping workflows based on agentType
+  try {
+    if (agentType === "market-intel") {
+      const competitors = companyProfile.competitors || "";
+      const query = `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim();
+      try {
+        console.log(`[Jina] Running search for market-intel: "${query}"`);
+        const results = await searchWeb(query, jinaApiKey);
+        if (results) {
+          searchBlocks.push(results);
+          executedTools.push("Jina Search");
+          jinaSucceeded = true;
+        }
+      } catch (err) {
+        console.error(`[Jina] Search failed for market-intel:`, err.message);
+      }
+    } else if (agentType === "geo-visibility") {
+      // Scrape blog URLs
+      const blogUrlsStr = agentInputs.blogUrls || "";
+      const urlsToScrape = extractUrls(blogUrlsStr).slice(0, 3);
+      for (const url of urlsToScrape) {
+        try {
+          console.log(`[Jina] Scraping blog URL: ${url}`);
+          const content = await scrapeUrl(url, jinaApiKey);
+          if (content) {
+            scrapedPages.push(`### Scraped Content from: ${url}\n\n${content}`);
+            executedTools.push(`Jina Reader (${url})`);
+            jinaSucceeded = true;
+          }
+        } catch (err) {
+          console.error(`[Jina] Scraping failed for ${url}:`, err.message);
+        }
+      }
+
+      // Search grounding
+      const targetQuery = agentInputs.query || "";
+      if (targetQuery) {
+        try {
+          console.log(`[Jina] Running search for geo-visibility: "${targetQuery}"`);
+          const results = await searchWeb(targetQuery, jinaApiKey);
+          if (results) {
+            searchBlocks.push(results);
+            executedTools.push("Jina Search");
+            jinaSucceeded = true;
+          }
+        } catch (err) {
+          console.error(`[Jina] Search failed for geo-visibility:`, err.message);
+        }
+      }
+    } else if (agentType === "citation-authority") {
+      const query = `top B2B directories listings and categories for ${companyProfile.icp}`.trim();
+      try {
+        console.log(`[Jina] Running search for citation-authority: "${query}"`);
+        const results = await searchWeb(query, jinaApiKey);
+        if (results) {
+          searchBlocks.push(results);
+          executedTools.push("Jina Search");
+          jinaSucceeded = true;
+        }
+      } catch (err) {
+        console.error(`[Jina] Search failed for citation-authority:`, err.message);
+      }
+    } else if (agentType === "linkedin-content") {
+      const topic = agentInputs.topic || "";
+      if (topic) {
+        const query = `${topic} ${companyProfile.icp || ""} industry news trends`.trim();
+        try {
+          console.log(`[Jina] Running search for linkedin-content: "${query}"`);
+          const results = await searchWeb(query, jinaApiKey);
+          if (results) {
+            searchBlocks.push(results);
+            executedTools.push("Jina Search");
+            jinaSucceeded = true;
+          }
+        } catch (err) {
+          console.error(`[Jina] Search failed for linkedin-content:`, err.message);
+        }
+      }
+    } else if (agentType === "conversion-repurposing") {
+      const sourceAssetStr = agentInputs.sourceAsset || "";
+      const urlsToScrape = extractUrls(sourceAssetStr).slice(0, 3);
+      for (const url of urlsToScrape) {
+        try {
+          console.log(`[Jina] Scraping conversion source asset: ${url}`);
+          const content = await scrapeUrl(url, jinaApiKey);
+          if (content) {
+            scrapedPages.push(`### Scraped Content from: ${url}\n\n${content}`);
+            executedTools.push(`Jina Reader (${url})`);
+            jinaSucceeded = true;
+          }
+        } catch (err) {
+          console.error(`[Jina] Scraping failed for conversion source asset ${url}:`, err.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[Jina] Major error during Jina integration flow:", err.message);
+  }
+
+  // 2. Assemble prompt grounding context
+  let groundedContext = "";
+  if (scrapedPages.length > 0) {
+    groundedContext += `\n\n<scraped_web_pages>\n${scrapedPages.join("\n\n")}\n</scraped_web_pages>\n`;
+  }
+  if (searchBlocks.length > 0) {
+    groundedContext += `\n\n<search_results>\n${searchBlocks.join("\n\n")}\n</search_results>\n`;
+  }
+  if (groundedContext) {
+    groundedContext += `\n\n[INSTRUCTION] Analyze and incorporate the real-time search results and scraped webpage contents above into your analysis and recommendations.`;
+  }
+
+  const userPrompt = config.buildUserPrompt(companyProfile, agentInputs || {}) + groundedContext;
   const messages = [
     { role: "system", content: config.systemPrompt },
     { role: "user", content: userPrompt },
   ];
 
-  try {
-    const primary = await callGroq({
-      apiKey,
-      model: config.model,
-      messages,
-      temperature: config.temperature,
-      maxCompletionTokens: config.maxCompletionTokens,
-    });
-    return res.status(200).json({
-      ok: true,
-      markdown: primary.content,
-      model: config.model,
-      fallbackUsed: false,
-      executedTools: primary.executedTools || [],
-    });
-  } catch (primaryErr) {
-    if (!config.fallbackModel) {
-      return res.status(502).json({ ok: false, error: `Groq API error: ${primaryErr.message}` });
+  // 3. Model routing and fallback execution
+  if (config.model === "groq/compound") {
+    if (jinaSucceeded) {
+      // Grounding succeeded, execute using fallbackModel as primary and mark fallbackUsed = false
+      try {
+        console.log(`[Model Route] Grounding succeeded. Running primary model: ${config.fallbackModel}`);
+        const primary = await callGroq({
+          apiKey,
+          model: config.fallbackModel,
+          messages,
+          temperature: config.temperature,
+          maxCompletionTokens: config.maxCompletionTokens,
+        });
+        return res.status(200).json({
+          ok: true,
+          markdown: primary.content,
+          model: config.fallbackModel,
+          fallbackUsed: false,
+          executedTools: executedTools,
+        });
+      } catch (primaryErr) {
+        console.error(`[Model Route] Grounded model failed:`, primaryErr.message);
+        return res.status(502).json({
+          ok: false,
+          error: `Groq API error on grounded model "${config.fallbackModel}": ${primaryErr.message}`,
+        });
+      }
+    } else {
+      // Grounding failed or was bypassed, execute using fallbackModel and mark fallbackUsed = true
+      try {
+        console.log(`[Model Route] Grounding failed/bypassed. Running fallback model: ${config.fallbackModel}`);
+        const fallback = await callGroq({
+          apiKey,
+          model: config.fallbackModel,
+          messages,
+          temperature: config.temperature,
+          maxCompletionTokens: config.maxCompletionTokens,
+        });
+        return res.status(200).json({
+          ok: true,
+          markdown: fallback.content,
+          model: config.fallbackModel,
+          fallbackUsed: true,
+          executedTools: [],
+          note: "Live web search was unavailable, so this used the model's existing knowledge only — verify recency manually.",
+        });
+      } catch (fallbackErr) {
+        return res.status(502).json({
+          ok: false,
+          error: `Groq API error on fallback model "${config.fallbackModel}" (search failed): ${fallbackErr.message}`,
+        });
+      }
     }
+  } else {
+    // Standard model execution
     try {
-      const fallback = await callGroq({
+      console.log(`[Model Route] Running standard model: ${config.model}`);
+      const primary = await callGroq({
         apiKey,
-        model: config.fallbackModel,
+        model: config.model,
         messages,
         temperature: config.temperature,
         maxCompletionTokens: config.maxCompletionTokens,
       });
-      const response = {
+      return res.status(200).json({
         ok: true,
-        markdown: fallback.content,
-        model: config.fallbackModel,
-        fallbackUsed: true,
-        executedTools: [],
-      };
-      if (config.model.includes("compound")) {
-        response.note =
-          "Live web search was unavailable, so this used the model's existing knowledge only — verify recency manually.";
-      }
-      return res.status(200).json(response);
-    } catch (fallbackErr) {
-      return res.status(502).json({
-        ok: false,
-        error: `Groq API error on both primary and fallback model: ${fallbackErr.message}`,
+        markdown: primary.content,
+        model: config.model,
+        fallbackUsed: false,
+        executedTools: executedTools,
       });
+    } catch (primaryErr) {
+      if (!config.fallbackModel) {
+        return res.status(502).json({ ok: false, error: `Groq API error: ${primaryErr.message}` });
+      }
+      try {
+        console.log(`[Model Route] Standard model failed. Running fallback model: ${config.fallbackModel}`);
+        const fallback = await callGroq({
+          apiKey,
+          model: config.fallbackModel,
+          messages,
+          temperature: config.temperature,
+          maxCompletionTokens: config.maxCompletionTokens,
+        });
+        return res.status(200).json({
+          ok: true,
+          markdown: fallback.content,
+          model: config.fallbackModel,
+          fallbackUsed: true,
+          executedTools: [],
+        });
+      } catch (fallbackErr) {
+        return res.status(502).json({
+          ok: false,
+          error: `Groq API error on both primary and fallback model: ${fallbackErr.message}`,
+        });
+      }
     }
   }
 }
@@ -143,3 +351,4 @@ async function callGroq({ apiKey, model, messages, temperature, maxCompletionTok
 
   return { content, executedTools };
 }
+
