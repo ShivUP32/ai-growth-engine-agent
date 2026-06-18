@@ -66,11 +66,7 @@ async function scrapeUrl(url, apiKey) {
 
   const headers = {};
   if (apiKey) {
-    if (apiKey.startsWith("fc-")) {
-      console.warn("[Jina] Invalid Jina API Key format (Firecrawl key detected) for Reader. Skipping Auth header.");
-    } else {
-      headers["Authorization"] = `Bearer ${apiKey}`;
-    }
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
   const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 1800);
   if (!response.ok) {
@@ -93,9 +89,6 @@ async function searchWeb(query, apiKey) {
 
   if (!apiKey) {
     throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
-  }
-  if (apiKey.startsWith("fc-")) {
-    throw new Error("Invalid Jina API Key format (Firecrawl key detected). Jina Search requires a Jina API key.");
   }
   const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
     headers: {
