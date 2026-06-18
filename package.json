@@ -7,5 +7,8 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "scripts": {
+    "dev": ".node/bin/node dev-server.js"
+  },
   "dependencies": {}
 }
