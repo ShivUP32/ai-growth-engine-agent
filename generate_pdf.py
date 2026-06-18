@@ -201,27 +201,28 @@ def build_pdf():
     )
     pdf.bullet(
         "Vanilla CSS3",
-        "A custom, responsive design system engineered using CSS Grid and Flexbox. Features built-in CSS variables "
-        "for light/dark accenting, scroll-safe code blocks, and dynamic status dots (green for completed, "
-        "amber for running, and red for errors) representing agent lifecycle states."
+        "A custom, responsive design system engineered using CSS Grid and Flexbox. Features CSS variables "
+        "for light/dark themes, scroll-safe code blocks, and dynamic agent state status lights."
     )
     pdf.bullet(
         "Vanilla JS & ES Modules",
-        "No frontend compilation (Babel, Webpack, etc.) or JS frameworks (React, Vue) are required. Native ES Modules "
-        "handle form state retrieval, coordinate DOM render updates, parse raw API responses, and run the sequential "
-        "orchestration flows using async fetch handlers."
+        "Handles form state retrieval, coordinates DOM renders, parses JSON payloads, and runs sequential "
+        "orchestration pipelines using browser-native async fetch handlers (no Webpack or Babel required)."
     )
     pdf.bullet(
         "Vercel Serverless Function",
-        "All model orchestration is run through an API endpoint (/api/agent.js). The client UI never calls Groq "
-        "directly, meaning the Groq API key remains safely locked inside Vercel's secure server environment, "
-        "preventing browser leakage."
+        "All model routing and data gathering run securely inside `/api/agent.js`. Groq, OpenRouter, and Jina "
+        "keys are kept strictly on Vercel's server environment, preventing credential leakage to the browser."
     )
     pdf.bullet(
-        "Groq Inference API",
-        "High-velocity inference utilizing Groq LLaMA models. Key agents utilize primary models (such as groq/compound "
-        "for web-search capability) and fall back to high-capacity alternatives (llama-3.3-70b-versatile or "
-        "llama-3.1-8b-instant) in case of rate-limiting or service outages."
+        "Jina AI Web Grounding",
+        "Used for real-time internet data gathering. Jina Search (`s.jina.ai`) queries public indexers and returns "
+        "clean results, while Jina Reader (`r.jina.ai`) scrapes raw body copy from blog URLs and source assets."
+    )
+    pdf.bullet(
+        "Groq & OpenRouter APIs",
+        "High-velocity LLM inference. To prevent rate-limit failures, the backend implements a sequential OpenRouter "
+        "fallback chain (Gemini Free -> GPT-OSS-120B -> Nemotron 3 Nano) to resolve requests when Groq fails."
     )
 
     # ==========================================
@@ -291,6 +292,36 @@ def build_pdf():
         "Step 4: Continuous Pipelines",
         "The remaining agents (Agent 04 Growth, Agent 05 Citations, Agent 06 Conversion) consume metrics, directory lists, "
         "and source assets to complete the comprehensive growth sprint pack, which is saved as a single unified document."
+    )
+    
+    pdf.ln(3)
+    pdf.paragraph("Targeting & Audience Personas:")
+    pdf.bullet(
+        "Ideal Customer Profile (ICP)",
+        "Configures the company's B2B target market segment. Upstream and downstream agents use this profile to filter directory recommendations and align search terms."
+    )
+    pdf.bullet(
+        "Target Persona",
+        "Defines the job role or executive title targeted (e.g. CFOs, Practice Managers). Post drafts, carousel outlines, and hook angles are written to address this audience directly."
+    )
+    pdf.bullet(
+        "Brand Tone",
+        "Enforces verbal constraints (e.g. analytical, expert, direct) to ensure all drafted outputs match your company's brand identity."
+    )
+    
+    pdf.ln(3)
+    pdf.paragraph("Data Grounding & Anti-Hallucination Guardrails:")
+    pdf.bullet(
+        "Parallel Search Gathering",
+        "To satisfy Vercel's strict 10s budget, the backend triggers Jina searches concurrently. In Market Intel, Jina "
+        "runs parallel queries for each competitor (e.g. 'competitor linkedin followers OR profile') alongside the "
+        "main category query. This gathers complete grounding data in a single turn before LLM execution."
+    )
+    pdf.bullet(
+        "Hallucination Prevention",
+        "If specific metrics are missing from Jina's search results (such as LinkedIn follower counts behind login walls), "
+        "hardened system instructions force the LLM to output 'Not found in search' or 'Not publicly indexed' "
+        "rather than fabricating mock placeholder figures."
     )
 
     # ==========================================
