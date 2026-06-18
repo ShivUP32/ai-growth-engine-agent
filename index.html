@@ -131,6 +131,12 @@
 
   </div>
 
+  <!-- Floating Drawer Trigger (Stuck to right screen edge when minimized) -->
+  <button class="floating-drawer-toggle" id="floating-drawer-toggle" title="Open Output Console">
+    <span class="toggle-icon">📊</span>
+    <span class="toggle-text">Output Console</span>
+  </button>
+
   <!-- Output Drawer -->
   <div class="output-drawer" id="output-drawer">
     <div class="drawer-header">
@@ -138,8 +144,23 @@
         <span class="drawer-eyebrow" id="drawer-eyebrow">AGENT OUTPUT</span>
         <h2 id="drawer-title">Output Panel</h2>
       </div>
-      <button class="drawer-close" id="drawer-close-btn" aria-label="Close Inspector">&times;</button>
+      <div class="drawer-header-actions">
+        <button class="drawer-expand" id="drawer-expand-btn" title="Expand Panel">&larr;</button>
+        <button class="drawer-close" id="drawer-close-btn" aria-label="Close Inspector">&times;</button>
+      </div>
     </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="drawer-nav-tabs" id="drawer-nav-tabs">
+      <button class="nav-tab active" data-tab="sprint">Sprint Pack</button>
+      <button class="nav-tab" data-tab="market-intel">A1: Market</button>
+      <button class="nav-tab" data-tab="linkedin-content">A2: LinkedIn</button>
+      <button class="nav-tab" data-tab="geo-visibility">A3: GEO</button>
+      <button class="nav-tab" data-tab="growth-report">A4: Forecast</button>
+      <button class="nav-tab" data-tab="citation-authority">A5: Citations</button>
+      <button class="nav-tab" data-tab="conversion-repurposing">A6: CTAs</button>
+    </nav>
+
     <div class="drawer-body" id="drawer-body"></div>
     <div class="drawer-footer">
       <button class="btn btn-primary btn-small" id="drawer-copy-btn" disabled>Copy Output</button>

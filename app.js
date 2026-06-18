@@ -956,6 +956,9 @@ function updateTransform() {
   drawWires();
 }
 
+// Expand state variable
+let isDrawerExpanded = false;
+
 // ---------------- Output Drawer Controller ----------------
 
 function openDrawer(agentKey) {
@@ -968,12 +971,20 @@ function openDrawer(agentKey) {
 
   currentDrawerAgentKey = agentKey;
 
+  // Update nav tabs active state
+  document.querySelectorAll(".nav-tab").forEach((tab) => {
+    if (tab.dataset.tab === agentKey) {
+      tab.classList.add("active");
+    } else {
+      tab.classList.remove("active");
+    }
+  });
+
   let state;
   let code = "";
   let name = "";
   let markdown = "";
   let fallbackUsed = false;
-  let note = "";
 
   if (agentKey === "sprint") {
     code = "SPRINT PACK";
@@ -1006,15 +1017,30 @@ function openDrawer(agentKey) {
   }
 
   let html = "";
-  if (fallbackUsed && (agentKey === "market-intel" || agentKey === "geo-visibility" || agentKey === "citation-authority")) {
-    html += `<div class="output-note">Live web search was unavailable, so this result used model knowledge only. Verify recency manually.</div>`;
+  if (!markdown) {
+    // Show empty state placeholder if agent has not generated output yet
+    const numberText = code;
+    const titleText = name;
+    html = `
+      <div class="drawer-empty-state">
+        <span class="empty-state-icon">⚠️</span>
+        <h3 class="empty-state-title">${numberText} Not Generated Yet</h3>
+        <p class="empty-state-desc">Set company inputs on the canvas grid and click "Run Agent" or run a "Full Sprint" to compile this report section.</p>
+      </div>
+    `;
+    body.innerHTML = html;
+    copyBtn.disabled = true;
+    dlBtn.disabled = true;
+  } else {
+    if (fallbackUsed && (agentKey === "market-intel" || agentKey === "geo-visibility" || agentKey === "citation-authority")) {
+      html += `<div class="output-note">Live web search was unavailable, so this result used model knowledge only. Verify recency manually.</div>`;
+    }
+    html += renderMarkdown(markdown);
+    body.innerHTML = html;
+    
+    copyBtn.disabled = false;
+    dlBtn.disabled = false;
   }
-  html += renderMarkdown(markdown);
-  body.innerHTML = html;
-
-  // Enable/disable footer action buttons
-  copyBtn.disabled = !markdown;
-  dlBtn.disabled = !markdown;
 
   drawer.classList.add("open");
   
@@ -1026,6 +1052,14 @@ function openDrawer(agentKey) {
 function closeDrawer() {
   const drawer = document.getElementById("output-drawer");
   drawer.classList.remove("open");
+  drawer.classList.remove("expanded");
+  
+  const expandBtn = document.getElementById("drawer-expand-btn");
+  if (expandBtn) {
+    expandBtn.innerHTML = "&larr;";
+    expandBtn.title = "Expand Panel";
+  }
+  isDrawerExpanded = false;
   currentDrawerAgentKey = null;
 
   const footer = document.querySelector(".site-footer");
@@ -1085,6 +1119,35 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("drawer-close-btn").addEventListener("click", closeDrawer);
   document.getElementById("drawer-copy-btn").addEventListener("click", handleDrawerCopy);
   document.getElementById("drawer-download-btn").addEventListener("click", handleDrawerDownload);
+
+  // Expand / Collapse width toggle
+  const expandBtn = document.getElementById("drawer-expand-btn");
+  const drawer = document.getElementById("output-drawer");
+  expandBtn.addEventListener("click", () => {
+    isDrawerExpanded = !isDrawerExpanded;
+    if (isDrawerExpanded) {
+      drawer.classList.add("expanded");
+      expandBtn.innerHTML = "&rarr;";
+      expandBtn.title = "Collapse Panel";
+    } else {
+      drawer.classList.remove("expanded");
+      expandBtn.innerHTML = "&larr;";
+      expandBtn.title = "Expand Panel";
+    }
+  });
+
+  // Floating Minimized Side Tab click handler
+  document.getElementById("floating-drawer-toggle").addEventListener("click", () => {
+    openDrawer(currentDrawerAgentKey || "sprint");
+  });
+
+  // Navigation tab bar switching
+  document.getElementById("drawer-nav-tabs").addEventListener("click", (e) => {
+    const tabBtn = e.target.closest(".nav-tab");
+    if (tabBtn) {
+      openDrawer(tabBtn.dataset.tab);
+    }
+  });
 
   // Close drawer if clicking escape key
   window.addEventListener("keydown", (e) => {
