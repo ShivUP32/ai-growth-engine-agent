@@ -956,8 +956,6 @@ function updateTransform() {
   drawWires();
 }
 
-// Expand state variable
-let isDrawerExpanded = false;
 
 // ---------------- Output Drawer Controller ----------------
 
@@ -1052,14 +1050,6 @@ function openDrawer(agentKey) {
 function closeDrawer() {
   const drawer = document.getElementById("output-drawer");
   drawer.classList.remove("open");
-  drawer.classList.remove("expanded");
-  
-  const expandBtn = document.getElementById("drawer-expand-btn");
-  if (expandBtn) {
-    expandBtn.innerHTML = "&larr;";
-    expandBtn.title = "Expand Panel";
-  }
-  isDrawerExpanded = false;
   currentDrawerAgentKey = null;
 
   const footer = document.querySelector(".site-footer");
@@ -1119,22 +1109,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("drawer-close-btn").addEventListener("click", closeDrawer);
   document.getElementById("drawer-copy-btn").addEventListener("click", handleDrawerCopy);
   document.getElementById("drawer-download-btn").addEventListener("click", handleDrawerDownload);
-
-  // Expand / Collapse width toggle
-  const expandBtn = document.getElementById("drawer-expand-btn");
-  const drawer = document.getElementById("output-drawer");
-  expandBtn.addEventListener("click", () => {
-    isDrawerExpanded = !isDrawerExpanded;
-    if (isDrawerExpanded) {
-      drawer.classList.add("expanded");
-      expandBtn.innerHTML = "&rarr;";
-      expandBtn.title = "Collapse Panel";
-    } else {
-      drawer.classList.remove("expanded");
-      expandBtn.innerHTML = "&larr;";
-      expandBtn.title = "Expand Panel";
-    }
-  });
 
   // Floating Minimized Side Tab click handler
   document.getElementById("floating-drawer-toggle").addEventListener("click", () => {
