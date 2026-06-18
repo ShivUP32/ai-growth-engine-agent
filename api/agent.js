@@ -311,7 +311,7 @@ export default async function handler(req, res) {
         { q: `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim(), json: false }
       ];
       for (const comp of compList) {
-        queries.push({ q: `"${comp}" linkedin content topics OR citation directories`, json: false });
+        queries.push({ q: `"${comp}" linkedin content topics OR authority news OR citation directories`, json: false });
       }
 
       const searchPromises = queries.map(async (item) => {

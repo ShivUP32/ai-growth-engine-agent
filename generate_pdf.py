@@ -314,7 +314,7 @@ def build_pdf():
     pdf.bullet(
         "Parallel Search Gathering",
         "To satisfy Vercel's strict 10s budget, the backend triggers Jina searches concurrently. In Market Intel, Jina "
-        "runs parallel queries for each competitor (e.g. 'competitor linkedin content topics OR citation directories') alongside the "
+        "runs parallel queries for each competitor (e.g. 'competitor linkedin content topics OR authority news OR citation directories') alongside the "
         "main category query. This gathers complete grounding data in a single turn before LLM execution."
     )
     pdf.bullet(

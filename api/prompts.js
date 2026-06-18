@@ -43,6 +43,10 @@ A Markdown table with columns: Competitor | Category | Positioning | Main Use Ca
 
 ## Competitor Ranking and Share-of-Voice Scorecard
 A Markdown table with columns: Competitor | LinkedIn Content Pillar | AI Engine Citation Sources | AI Search Visibility | Key Strength | VoiceCare Exploit Gap | Action.
+*Column Definitions & Instructions:*
+- **LinkedIn Content Pillar**: Identify the key content themes or pillars the competitor posts about based on the search results.
+- **AI Engine Citation Sources**: List the specific high-authority domains, publications, or directories citing the competitor in the search results (e.g., 'Fierce Healthcare, MobiHealthNews, Crunchbase') which AI engines would cite for answers.
+- **AI Search Visibility**: Rate qualitatively (e.g., 'High (cited in major news & funding)', 'Medium (featured on B2B directories)', 'Low (minimal web mentions)') based on the density and authority of search results.
 *Note: For all columns, base the findings strictly on the Jina search results. If any competitor details (such as citation sources or LinkedIn positioning themes) are not found in the search results, write 'Not found in search' or 'Not publicly indexed' instead of inventing or estimating them. Keep all information strictly grounded.*
 
 ## Top 5 Content & Category Gaps
