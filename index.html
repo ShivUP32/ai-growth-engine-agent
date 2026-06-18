@@ -3,97 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Safe AI Growth Engine — VoiceCare AI</title>
-  <meta name="description" content="A safe, ToS-compliant AI growth engine: LinkedIn content strategy, market intelligence, AI-search (GEO/AEO) visibility, growth reporting, citation authority, and conversion assets — research and drafting only, never automation." />
+  <title>AI Growth Engine — VoiceCare AI</title>
+  <meta name="description" content="A ToS-compliant AI growth engine: LinkedIn content strategy, market intelligence, AI-search (GEO/AEO) visibility, growth reporting, citation authority, and conversion assets — research and drafting only, never automation." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
+  <!-- Floating Header -->
   <header class="site-header">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true">●</span>
-      <span class="brand-name">Safe AI Growth Engine</span>
+      <span class="brand-name">AI Growth Engine</span>
     </div>
-    <p class="brand-tagline">A safe AI operating console for LinkedIn growth, GEO/AEO/ASO visibility, competitor share of voice, citation authority, and conversion assets.</p>
+    <p class="brand-tagline">An AI operating console for LinkedIn growth, GEO/AEO/ASO visibility, competitor SOV, citations, and conversion assets.</p>
   </header>
 
-  <main class="layout">
+  <!-- Figma/n8n Style Dotted Canvas Viewport -->
+  <div class="canvas-viewport" id="canvas-viewport">
+    
+    <!-- Pannable/Zoomable Canvas Container -->
+    <div class="canvas-container" id="canvas-container">
+      
+      <!-- SVG Overlay for Connecting Wires -->
+      <svg class="canvas-svg" id="canvas-svg"></svg>
 
-    <section class="panel profile" aria-labelledby="profile-heading">
-      <h2 id="profile-heading" class="eyebrow">COMPANY PROFILE</h2>
-      <p class="panel-subtitle">Works for any company — defaults below are filled in for VoiceCare AI as a demo.</p>
+      <!-- 1. Input Node: Company Profile (Leftmost) -->
+      <section class="canvas-node profile-node" id="node-profile" style="left: 50px; top: 150px;">
+        <div class="node-header">
+          <h2 class="eyebrow">INPUT ENGINE</h2>
+          <h3 class="panel-title">Company Profile</h3>
+          <p class="panel-subtitle">Configure targets and competitor variables.</p>
+        </div>
 
-      <div class="field-grid">
-        <label class="field">
-          <span>Company name</span>
-          <input type="text" id="f-companyName" value="VoiceCare AI" />
-        </label>
+        <div class="field-grid">
+          <label class="field">
+            <span>Company name</span>
+            <input type="text" id="f-companyName" value="VoiceCare AI" />
+          </label>
 
-        <label class="field">
-          <span>Website</span>
-          <input type="text" id="f-website" value="https://voicecare.ai" />
-        </label>
+          <label class="field">
+            <span>Website</span>
+            <input type="text" id="f-website" value="https://voicecare.ai" />
+          </label>
 
-        <label class="field field-wide">
-          <span>Industry / ICP (ideal customer profile)</span>
-          <input type="text" id="f-icp" value="Healthcare RCM and back-office teams at hospitals, health systems, and provider groups" />
-        </label>
+          <label class="field">
+            <span>Industry / ICP</span>
+            <input type="text" id="f-icp" value="Healthcare RCM and back-office teams at hospitals, health systems, and provider groups" />
+          </label>
 
-        <label class="field field-wide">
-          <span>Audience persona</span>
-          <input type="text" id="f-persona" value="VP of Revenue Cycle / Patient Access at a mid-to-large health system" />
-        </label>
+          <label class="field">
+            <span>Audience persona</span>
+            <input type="text" id="f-persona" value="VP of Revenue Cycle / Patient Access at a mid-to-large health system" />
+          </label>
 
-        <label class="field">
-          <span>Voice / tone</span>
-          <select id="f-tone">
-            <option value="confident, plain-spoken, evidence-led" selected>Confident, plain-spoken</option>
-            <option value="warm, mission-driven, plain-spoken">Warm, mission-driven</option>
-            <option value="technical, precise, builder-to-builder">Technical, builder-to-builder</option>
-            <option value="executive, concise, ROI-led">Executive, ROI-led</option>
-          </select>
-        </label>
+          <label class="field">
+            <span>Voice / tone</span>
+            <select id="f-tone">
+              <option value="confident, plain-spoken, evidence-led" selected>Confident, plain-spoken</option>
+              <option value="warm, mission-driven, plain-spoken">Warm, mission-driven</option>
+              <option value="technical, precise, builder-to-builder">Technical, builder-to-builder</option>
+              <option value="executive, concise, ROI-led">Executive, ROI-led</option>
+            </select>
+          </label>
 
-        <label class="field field-wide">
-          <span>Known competitors (comma-separated, optional)</span>
-          <input type="text" id="f-competitors" value="Notable Health, Infinitus Systems, Hippocratic AI, Ambience Healthcare" />
-        </label>
+          <label class="field">
+            <span>Known competitors (comma-separated)</span>
+            <input type="text" id="f-competitors" value="Notable Health, Infinitus Systems, Hippocratic AI, Ambience Healthcare" />
+          </label>
 
-        <label class="field">
-          <span>Current LinkedIn followers</span>
-          <input type="number" id="f-currentFollowers" value="2900" min="0" />
-        </label>
+          <label class="field">
+            <span>Current LinkedIn followers</span>
+            <input type="number" id="f-currentFollowers" value="2900" min="0" />
+          </label>
 
-        <label class="field">
-          <span>Follower goal</span>
-          <input type="number" id="f-followerGoal" value="10000" min="0" />
-        </label>
+          <label class="field">
+            <span>Follower goal</span>
+            <input type="number" id="f-followerGoal" value="10000" min="0" />
+          </label>
 
-        <label class="field">
-          <span>Days remaining</span>
-          <input type="number" id="f-daysRemaining" value="90" min="1" />
-        </label>
+          <label class="field">
+            <span>Days remaining</span>
+            <input type="number" id="f-daysRemaining" value="90" min="1" />
+          </label>
+        </div>
+
+        <!-- Output Port -->
+        <div class="port port-out" data-port="profile-out" title="Configured Profile Output"></div>
+      </section>
+
+      <!-- 2. Dynamic Agent Nodes Grid -->
+      <div id="console">
+        <!-- Agent cards (Nodes 01-06) will be rendered here dynamically by app.js -->
       </div>
 
-      <div class="sprint-bar">
-        <button id="run-sprint-btn" class="btn btn-primary">Run full growth sprint</button>
-        <button id="sprint-download-btn" class="btn btn-small" style="display:none">Download combined pack</button>
-        <span id="sprint-status" class="sprint-status" role="status" aria-live="polite"></span>
+      <!-- 3. Output Node: Sprint Orchestrator (Rightmost) -->
+      <section class="canvas-node sprint-node" id="node-sprint" style="left: 1900px; top: 480px;">
+        <!-- Input Port -->
+        <div class="port port-in" data-port="sprint-in" title="Consolidated Agent Inputs"></div>
+
+        <div class="node-header">
+          <h2 class="eyebrow">Sprint Orchestrator</h2>
+          <h3 class="panel-title">Combined Output Pack</h3>
+          <p class="panel-subtitle">Consolidate all agent research summaries.</p>
+        </div>
+        
+        <div class="sprint-bar">
+          <button id="run-sprint-btn" class="btn btn-primary">Run Full Sprint</button>
+          <button id="sprint-download-btn" class="btn btn-small" style="display:none">Download Pack</button>
+          <button id="sprint-view-btn" class="btn btn-small" style="display:none">View Output</button>
+          <span id="sprint-status" class="sprint-status" role="status" aria-live="polite"></span>
+        </div>
+        <p class="sprint-hint">Runs all 6 agents sequentially, feeding findings from Agent 01 forward into downstream components.</p>
+      </section>
+
+    </div>
+
+    <!-- Floating Canvas Controls -->
+    <div class="canvas-controls">
+      <button class="ctrl-btn" id="ctrl-zoom-in" title="Zoom In">+</button>
+      <button class="ctrl-btn" id="ctrl-zoom-out" title="Zoom Out">-</button>
+      <button class="ctrl-btn" id="ctrl-zoom-reset" title="Reset View">⟲</button>
+      <button class="ctrl-btn" id="ctrl-zoom-fit" title="Fit to Workspace">[]</button>
+    </div>
+
+  </div>
+
+  <!-- Output Drawer -->
+  <div class="output-drawer" id="output-drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-block">
+        <span class="drawer-eyebrow" id="drawer-eyebrow">AGENT OUTPUT</span>
+        <h2 id="drawer-title">Output Panel</h2>
       </div>
-      <p class="sprint-hint">Runs all six agents in order, feeding Market Intelligence's findings into downstream agents. Each agent can also be run on its own below.</p>
-    </section>
+      <button class="drawer-close" id="drawer-close-btn" aria-label="Close Inspector">&times;</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+    <div class="drawer-footer">
+      <button class="btn btn-primary btn-small" id="drawer-copy-btn" disabled>Copy Output</button>
+      <button class="btn btn-small" id="drawer-download-btn" disabled>Download .md</button>
+    </div>
+  </div>
 
-    <section class="console" id="console" aria-label="Agent console">
-      <!-- Agent cards are rendered here by app.js -->
-    </section>
-
-  </main>
-
+  <!-- Floating Footer -->
   <footer class="site-footer">
     <p>
-      No LinkedIn automation. No scraping. No auto-DMs. No fake engagement. No PHI. Human review required before publishing or outreach.
-      <br />
-      <a href="docs/PRD.md">PRD</a> · <a href="docs/DESIGN.md">Design</a> · <a href="docs/AGENT_FLOWS.md">Agent flows</a> · <a href="docs/VERCEL_ENV_SETUP.md">Setup</a>
+      No LinkedIn automation. No scraping. No auto-DMs. No fake engagement. Human review required before publishing or outreach.
+      <a href="docs/PRD.md" target="_blank">PRD</a> · <a href="docs/DESIGN.md" target="_blank">Design</a> · <a href="docs/AGENT_FLOWS.md" target="_blank">Agent flows</a> · <a href="docs/VERCEL_ENV_SETUP.md" target="_blank">Setup</a>
     </p>
   </footer>
 
