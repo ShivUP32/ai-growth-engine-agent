@@ -115,38 +115,89 @@ function getOpenRouterModel(groqModel) {
 }
 
 // Call OpenRouter API
-async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens }) {
+async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens, isFallbackCall = false }) {
   const endpoint = "https://openrouter.ai/api/v1/chat/completions";
-  const response = await fetchWithTimeout(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "HTTP-Referer": "https://ai-growth-engine-agent.vercel.app",
-      "X-Title": "VoiceCare AI Safe Growth Engine",
-    },
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  }, 6000); // 6 seconds timeout for OpenRouter
+  try {
+    const response = await fetchWithTimeout(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://ai-growth-engine-agent.vercel.app",
+        "X-Title": "VoiceCare AI Safe Growth Engine",
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+    }, 6000); // 6 seconds timeout for OpenRouter
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`HTTP ${response.status} from OpenRouter model "${model}": ${errorBody.slice(0, 300)}`);
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`HTTP ${response.status} from OpenRouter model "${model}": ${errorBody.slice(0, 300)}`);
+    }
+
+    const data = await response.json();
+    const choice = data.choices && data.choices[0];
+    const content = choice && choice.message ? choice.message.content : "";
+
+    if (!content) {
+      throw new Error(`OpenRouter model "${model}" returned an empty response.`);
+    }
+
+    return { content, model };
+  } catch (err) {
+    console.error(`[OpenRouter] Call failed for model "${model}":`, err.message);
+
+    // Only run fallback if it's not already a fallback call, and the target is llama-3.3-70b-versatile/instruct
+    if (isFallbackCall || (model !== "meta-llama/llama-3.3-70b-instruct" && model !== "llama-3.3-70b-versatile")) {
+      throw err;
+    }
+
+    console.log(`[OpenRouter Fallback Chain] Primary model "${model}" failed. Triggering sequential multi-model fallback chain...`);
+
+    const fallbackList = [
+      // 1. Gemini free API (best available)
+      "google/gemini-2.5-flash:free",
+      "google/gemini-2.5-pro:free",
+      "google/gemini-2.0-flash-exp:free",
+      "google/gemini-flash-1.5-8b:free",
+      "google/gemini-1.5-flash:free",
+      "google/gemini-1.5-pro:free",
+
+      // 2. GPT-OSS-120B by OpenAI
+      "openai/gpt-oss-120b",
+      "openai/gpt-oss-120b:free",
+
+      // 3. Nemotron 3 Nano 30B A3B
+      "nvidia/nemotron-3-nano-30b-a3b:free",
+      "nvidia/nemotron-3-nano-30b-a3b"
+    ];
+
+    let lastError = err;
+    for (const fbModel of fallbackList) {
+      try {
+        console.log(`[OpenRouter Fallback Chain] Trying fallback model "${fbModel}"...`);
+        const res = await callOpenRouter({
+          apiKey,
+          model: fbModel,
+          messages,
+          temperature,
+          maxTokens,
+          isFallbackCall: true // prevent recursion
+        });
+        console.log(`[OpenRouter Fallback Chain] Success! Used fallback model "${fbModel}"`);
+        return { content: res.content, model: `${fbModel} (OpenRouter Fallback)` };
+      } catch (fbErr) {
+        console.error(`[OpenRouter Fallback Chain] Fallback model "${fbModel}" failed:`, fbErr.message);
+        lastError = fbErr;
+      }
+    }
+
+    throw new Error(`All models in OpenRouter fallback chain failed. Last error: ${lastError.message}`);
   }
-
-  const data = await response.json();
-  const choice = data.choices && data.choices[0];
-  const content = choice && choice.message ? choice.message.content : "";
-
-  if (!content) {
-    throw new Error(`OpenRouter model "${model}" returned an empty response.`);
-  }
-
-  return { content };
 }
 
 // Helper wrapper to try Groq first, and if failed, try OpenRouter fallback
@@ -163,7 +214,11 @@ async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, tempera
     try {
       console.log(`[OpenRouter] Falling back to OpenRouter model "${orModel}"`);
       const res = await callOpenRouter({ apiKey: orApiKey, model: orModel, messages, temperature, maxTokens: maxCompletionTokens });
-      return { content: res.content, provider: "OpenRouter", model: `${orModel} (OpenRouter)` };
+      let finalModelName = res.model || orModel;
+      if (!finalModelName.includes("OpenRouter")) {
+        finalModelName = `${finalModelName} (OpenRouter)`;
+      }
+      return { content: res.content, provider: "OpenRouter", model: finalModelName };
     } catch (orErr) {
       console.error(`[OpenRouter] Failed for model "${orModel}":`, orErr.message);
       throw new Error(`Groq failed (${groqErr.message}) and OpenRouter failed (${orErr.message})`);
@@ -425,10 +480,14 @@ export default async function handler(req, res) {
               temperature: config.temperature,
               maxTokens: config.maxCompletionTokens,
             });
+            let finalModelName = fallback.model || orModel;
+            if (!finalModelName.includes("OpenRouter")) {
+              finalModelName = `${finalModelName} (OpenRouter)`;
+            }
             return res.status(200).json({
               ok: true,
               markdown: fallback.content,
-              model: `${orModel} (OpenRouter)`,
+              model: finalModelName,
               fallbackUsed: true,
               executedTools: [],
             });
