@@ -42,8 +42,8 @@ For every request, produce exactly these sections, in this order, using these ex
 A Markdown table with columns: Competitor | Category | Positioning | Main Use Cases | Proof Points | Content Themes | VoiceCare Counter-Position.
 
 ## Competitor Ranking and Share-of-Voice Scorecard
-A Markdown table with columns: Competitor | LinkedIn Followers | AI-Engine Mentions | Google Category Presence | Third-Party Mentions | Key Strength | VoiceCare Gap | Action.
-*Note: For columns like 'LinkedIn Followers', 'AI-Engine Mentions', and 'Third-Party Mentions', if the exact metrics are not found in the Jina search results, DO NOT invent or estimate any values. Write 'Not found in search' or 'Not publicly indexed' instead. Keep all numbers strictly grounded in the search results.*
+A Markdown table with columns: Competitor | LinkedIn Content Pillar | AI Engine Citation Sources | AI Search Visibility | Key Strength | VoiceCare Exploit Gap | Action.
+*Note: For all columns, base the findings strictly on the Jina search results. If any competitor details (such as citation sources or LinkedIn positioning themes) are not found in the search results, write 'Not found in search' or 'Not publicly indexed' instead of inventing or estimating them. Keep all information strictly grounded.*
 
 ## Top 5 Content & Category Gaps
 A numbered list of five gaps. Each gap must name the specific competitor weakness or unaddressed buyer question it responds to.

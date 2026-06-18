@@ -314,12 +314,12 @@ def build_pdf():
     pdf.bullet(
         "Parallel Search Gathering",
         "To satisfy Vercel's strict 10s budget, the backend triggers Jina searches concurrently. In Market Intel, Jina "
-        "runs parallel queries for each competitor (e.g. 'competitor linkedin followers OR profile') alongside the "
+        "runs parallel queries for each competitor (e.g. 'competitor linkedin content topics OR citation directories') alongside the "
         "main category query. This gathers complete grounding data in a single turn before LLM execution."
     )
     pdf.bullet(
         "Hallucination Prevention",
-        "If specific metrics are missing from Jina's search results (such as LinkedIn follower counts behind login walls), "
+        "If specific details are missing from Jina's search results (such as LinkedIn content pillars or citation sources), "
         "hardened system instructions force the LLM to output 'Not found in search' or 'Not publicly indexed' "
         "rather than fabricating mock placeholder figures."
     )
