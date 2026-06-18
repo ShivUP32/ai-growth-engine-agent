@@ -66,9 +66,13 @@ async function scrapeUrl(url, apiKey) {
 
   const headers = {};
   if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
+    if (apiKey.startsWith("fc-")) {
+      console.warn("[Jina] Invalid Jina API Key format (Firecrawl key detected) for Reader. Skipping Auth header.");
+    } else {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    }
   }
-  const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 4000);
+  const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 1800);
   if (!response.ok) {
     throw new Error(`Jina Reader returned status ${response.status}`);
   }
@@ -90,11 +94,14 @@ async function searchWeb(query, apiKey) {
   if (!apiKey) {
     throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
   }
+  if (apiKey.startsWith("fc-")) {
+    throw new Error("Invalid Jina API Key format (Firecrawl key detected). Jina Search requires a Jina API key.");
+  }
   const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
     headers: {
       "Authorization": `Bearer ${apiKey}`
     }
-  }, 4000);
+  }, 1800);
   if (!response.ok) {
     throw new Error(`Jina Search returned status ${response.status}`);
   }
@@ -131,7 +138,7 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens 
       temperature,
       max_tokens: maxTokens,
     }),
-  }, 12000);
+  }, 6000); // 6 seconds timeout for OpenRouter
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -481,7 +488,7 @@ async function callGroq({ apiKey, model, messages, temperature, maxCompletionTok
       temperature,
       max_completion_tokens: maxCompletionTokens,
     }),
-  }, 12000); // 12 seconds timeout for Groq
+  }, 6000); // 6 seconds timeout for Groq
 
   if (!response.ok) {
     const errorBody = await response.text();
