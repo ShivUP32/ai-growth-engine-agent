@@ -46,6 +46,22 @@ const server = http.createServer(async (req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
 
+  // Handle /api/version
+  if (pathname === '/api/version' && req.method === 'GET') {
+    const liveManifestPath = path.join(__dirname, 'api', 'version_manifest.json');
+    let versionData = { activeVersion: 'v0.0.0-dev', releaseDate: new Date().toISOString(), description: 'Development Build' };
+    if (fs.existsSync(liveManifestPath)) {
+      try {
+        versionData = JSON.parse(fs.readFileSync(liveManifestPath, 'utf8'));
+      } catch (err) {
+        console.warn('Warning: Could not parse live version manifest:', err.message);
+      }
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(versionData));
+    return;
+  }
+
   // 3. Handle /api/agent
   if (pathname === '/api/agent' && req.method === 'POST') {
     let body = '';

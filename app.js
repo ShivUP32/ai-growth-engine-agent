@@ -1103,6 +1103,19 @@ function handleDrawerDownload() {
 
 document.addEventListener("DOMContentLoaded", () => {
   renderConsole();
+  
+  // Fetch and display active version
+  fetch("/api/version")
+    .then(res => res.json())
+    .then(data => {
+      const badge = document.getElementById("version-badge");
+      if (badge && data && data.activeVersion) {
+        badge.textContent = data.activeVersion;
+        badge.title = `Released: ${new Date(data.releaseDate).toLocaleString()}\nDescription: ${data.description}`;
+      }
+    })
+    .catch(err => console.warn("Failed to fetch version info:", err));
+
   wireCardActions();
   initCanvas();
 
