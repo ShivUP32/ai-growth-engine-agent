@@ -43,6 +43,7 @@ A Markdown table with columns: Competitor | Category | Positioning | Main Use Ca
 
 ## Competitor Ranking and Share-of-Voice Scorecard
 A Markdown table with columns: Competitor | LinkedIn Followers | AI-Engine Mentions | Google Category Presence | Third-Party Mentions | Key Strength | VoiceCare Gap | Action.
+*Note: For columns like 'LinkedIn Followers', 'AI-Engine Mentions', and 'Third-Party Mentions', if the exact metrics are not found in the Jina search results, DO NOT invent or estimate any values. Write 'Not found in search' or 'Not publicly indexed' instead. Keep all numbers strictly grounded in the search results.*
 
 ## Top 5 Content & Category Gaps
 A numbered list of five gaps. Each gap must name the specific competitor weakness or unaddressed buyer question it responds to.
@@ -85,6 +86,7 @@ ${SAFETY_CORE}
 Additional rules specific to content drafting:
 - Never write a post implying it has already been posted, scheduled, or sent.
 - Never invent a specific metric, customer name, or investor name. If no proof point is supplied, either omit the number or insert the literal placeholder "[insert verified metric]".
+- DO NOT invent case studies, statistics, names, or testimonials that are not provided in the user inputs or search results. Use '[insert verified metric/name]' if the information is unavailable.
 - Keep tone expert and practical, never hype-y. No exclamation-point hype, no generic AI-sounding filler, no emoji unless the requested tone explicitly calls for a friendly/approachable style.
 - If the industry is regulated (e.g. healthcare), never make a clinical, medical, or compliance claim beyond what is explicitly supplied.
 - Every individual post draft must end with the line "DRAFT — human review required before posting."
@@ -168,6 +170,7 @@ Include H1, meta title, meta description, 40-60 word answer-style definition, se
 
 ## Answer-Engine Citation Testing Protocol
 A Markdown table with columns: Query | Engine | VoiceCare Mentioned? | Position | Competitors Mentioned | Sources Cited | Content Type Cited | Why VoiceCare Was Included/Excluded | Action.
+*Note: If you do not have actual audit data or notes for a query/engine combination, write 'Not audited' or 'No data supplied' instead. Do not fabricate positions or competitor mentions.*
 
 ## Content Gap Summary
 2-3 sentences on what evidence, pages, citations, or freshness signals are likely missing.
@@ -214,6 +217,7 @@ Show the arithmetic: current followers, goal, weeks remaining, and required week
 
 ## Reverse Follower Growth Model
 A Markdown table with columns: Source | Weekly Follower Contribution Target | Actual This Week | Gap | Fix for Next Week.
+*Note: If any metric is not provided in the inputs, write 'Not reported'. DO NOT invent or estimate contribution target numbers or actuals.*
 
 ## Visibility Scorecard
 Provide scorecard details or qualitative/quantitative ratings for: LinkedIn visibility, founder visibility, Google visibility, AI-engine visibility, citation visibility, directory visibility, earned media, and content authority.
@@ -260,6 +264,7 @@ For every request, produce exactly these sections, in this order:
 
 ## Citation Opportunity List
 A Markdown table with columns: Target Source | Type | Domain Authority Signal | Why It Matters | Suggested Pitch | Owner | Status.
+*Note: If a target source's domain authority or traffic is not found in the search results, write 'Not publicly indexed' or 'Estimated from search'. Do not fabricate specific authority scores.*
 
 ## Priority Targets
 Top 10 targets ranked by likely AI-engine citation value and buyer trust.
@@ -298,6 +303,7 @@ ${SAFETY_CORE}
 Additional rules specific to conversion/repurposing work:
 - Do not invent customer data, private ROI metrics, or security claims. Focus on converting public interest using compliance-safe and value-grounded approaches.
 - Always recommend manual content assembly, personalization, and review.
+- DO NOT invent case study metrics, ROI statistics, or testimonials not supplied by user input or source assets. Use '[insert verified result]' instead if required.
 
 For every request, produce exactly these sections, in this order:
 

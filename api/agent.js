@@ -274,18 +274,29 @@ export default async function handler(req, res) {
   try {
     if (agentType === "market-intel") {
       const competitors = companyProfile.competitors || "";
-      const query = `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim();
-      try {
-        console.log(`[Jina] Running search for market-intel: "${query}"`);
-        const results = await searchWeb(query, jinaApiKey);
-        if (results) {
-          searchBlocks.push(results);
-          executedTools.push("Jina Search");
-          jinaSucceeded = true;
-        }
-      } catch (err) {
-        console.error(`[Jina] Search failed for market-intel:`, err.message);
+      const compList = competitors.split(",").map(c => c.trim()).filter(Boolean).slice(0, 3);
+      
+      const mainQuery = `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim();
+      const queries = [mainQuery];
+      for (const comp of compList) {
+        queries.push(`"${comp}" linkedin followers OR company profile size`);
       }
+
+      const searchPromises = queries.map(async (q) => {
+        try {
+          console.log(`[Jina] Running search for market-intel: "${q}"`);
+          const results = await searchWeb(q, jinaApiKey);
+          if (results) {
+            searchBlocks.push(`### Search Results for: "${q}"\n\n${results}`);
+            executedTools.push(`Jina Search ("${q}")`);
+            jinaSucceeded = true;
+          }
+        } catch (err) {
+          console.error(`[Jina] Search failed for market-intel query "${q}":`, err.message);
+        }
+      });
+
+      await Promise.all(searchPromises);
     } else if (agentType === "geo-visibility") {
       const blogUrlsStr = agentInputs.blogUrls || "";
       const urlsToScrape = extractUrls(blogUrlsStr).slice(0, 3);
