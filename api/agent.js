@@ -18,6 +18,36 @@ import { AGENT_CONFIG } from "./prompts.js";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 
+// Simple in-memory cache for Jina scrape and search results (max 50 entries)
+const jinaCache = new Map();
+
+function cleanCacheIfFull() {
+  if (jinaCache.size > 50) {
+    console.log("[Cache] Clearing Jina cache (exceeded 50 items)");
+    jinaCache.clear();
+  }
+}
+
+// Fetch helper with timeout support using AbortController
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    if (error.name === "AbortError") {
+      throw new Error(`Request timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
+}
+
 // Extract URLs from a string
 function extractUrls(str) {
   if (!str) return [];
@@ -28,32 +58,50 @@ function extractUrls(str) {
 // Scrape a URL using Jina Reader
 async function scrapeUrl(url, apiKey) {
   if (!url) return "";
+  const cacheKey = `scrape:${url}`;
+  if (jinaCache.has(cacheKey)) {
+    console.log(`[Cache Hit] Reusing scraped content for: ${url}`);
+    return jinaCache.get(cacheKey);
+  }
+
   const headers = {};
   if (apiKey) {
     headers["Authorization"] = `Bearer ${apiKey}`;
   }
-  const response = await fetch(`https://r.jina.ai/${encodeURI(url)}`, { headers });
+  const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 4000);
   if (!response.ok) {
     throw new Error(`Jina Reader returned status ${response.status}`);
   }
-  return await response.text();
+  const text = await response.text();
+  cleanCacheIfFull();
+  jinaCache.set(cacheKey, text);
+  return text;
 }
 
 // Search using Jina Search
 async function searchWeb(query, apiKey) {
   if (!query) return "";
+  const cacheKey = `search:${query}`;
+  if (jinaCache.has(cacheKey)) {
+    console.log(`[Cache Hit] Reusing search results for: "${query}"`);
+    return jinaCache.get(cacheKey);
+  }
+
   if (!apiKey) {
     throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
   }
-  const response = await fetch(`https://s.jina.ai/${encodeURIComponent(query)}`, {
+  const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
     headers: {
       "Authorization": `Bearer ${apiKey}`
     }
-  });
+  }, 4000);
   if (!response.ok) {
     throw new Error(`Jina Search returned status ${response.status}`);
   }
-  return await response.text();
+  const text = await response.text();
+  cleanCacheIfFull();
+  jinaCache.set(cacheKey, text);
+  return text;
 }
 
 // Model mapping helper to translate Groq model names to OpenRouter equivalents
@@ -69,7 +117,7 @@ function getOpenRouterModel(groqModel) {
 // Call OpenRouter API
 async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens }) {
   const endpoint = "https://openrouter.ai/api/v1/chat/completions";
-  const response = await fetch(endpoint, {
+  const response = await fetchWithTimeout(endpoint, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -83,7 +131,7 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens 
       temperature,
       max_tokens: maxTokens,
     }),
-  });
+  }, 12000);
 
   if (!response.ok) {
     const errorBody = await response.text();
@@ -184,10 +232,10 @@ export default async function handler(req, res) {
         console.error(`[Jina] Search failed for market-intel:`, err.message);
       }
     } else if (agentType === "geo-visibility") {
-      // Scrape blog URLs
       const blogUrlsStr = agentInputs.blogUrls || "";
       const urlsToScrape = extractUrls(blogUrlsStr).slice(0, 3);
-      for (const url of urlsToScrape) {
+      
+      const scrapePromises = urlsToScrape.map(async (url) => {
         try {
           console.log(`[Jina] Scraping blog URL: ${url}`);
           const content = await scrapeUrl(url, jinaApiKey);
@@ -199,23 +247,27 @@ export default async function handler(req, res) {
         } catch (err) {
           console.error(`[Jina] Scraping failed for ${url}:`, err.message);
         }
+      });
+
+      const targetQuery = agentInputs.query || "";
+      let searchPromise = Promise.resolve();
+      if (targetQuery) {
+        searchPromise = (async () => {
+          try {
+            console.log(`[Jina] Running search for geo-visibility: "${targetQuery}"`);
+            const results = await searchWeb(targetQuery, jinaApiKey);
+            if (results) {
+              searchBlocks.push(results);
+              executedTools.push("Jina Search");
+              jinaSucceeded = true;
+            }
+          } catch (err) {
+            console.error(`[Jina] Search failed for geo-visibility:`, err.message);
+          }
+        })();
       }
 
-      // Search grounding
-      const targetQuery = agentInputs.query || "";
-      if (targetQuery) {
-        try {
-          console.log(`[Jina] Running search for geo-visibility: "${targetQuery}"`);
-          const results = await searchWeb(targetQuery, jinaApiKey);
-          if (results) {
-            searchBlocks.push(results);
-            executedTools.push("Jina Search");
-            jinaSucceeded = true;
-          }
-        } catch (err) {
-          console.error(`[Jina] Search failed for geo-visibility:`, err.message);
-        }
-      }
+      await Promise.all([...scrapePromises, searchPromise]);
     } else if (agentType === "citation-authority") {
       const query = `top B2B directories listings and categories for ${companyProfile.icp}`.trim();
       try {
@@ -248,7 +300,8 @@ export default async function handler(req, res) {
     } else if (agentType === "conversion-repurposing") {
       const sourceAssetStr = agentInputs.sourceAsset || "";
       const urlsToScrape = extractUrls(sourceAssetStr).slice(0, 3);
-      for (const url of urlsToScrape) {
+      
+      const scrapePromises = urlsToScrape.map(async (url) => {
         try {
           console.log(`[Jina] Scraping conversion source asset: ${url}`);
           const content = await scrapeUrl(url, jinaApiKey);
@@ -260,7 +313,9 @@ export default async function handler(req, res) {
         } catch (err) {
           console.error(`[Jina] Scraping failed for conversion source asset ${url}:`, err.message);
         }
-      }
+      });
+
+      await Promise.all(scrapePromises);
     }
   } catch (err) {
     console.error("[Jina] Major error during Jina integration flow:", err.message);
@@ -414,7 +469,7 @@ export default async function handler(req, res) {
 }
 
 async function callGroq({ apiKey, model, messages, temperature, maxCompletionTokens }) {
-  const response = await fetch(GROQ_ENDPOINT, {
+  const response = await fetchWithTimeout(GROQ_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -426,7 +481,7 @@ async function callGroq({ apiKey, model, messages, temperature, maxCompletionTok
       temperature,
       max_completion_tokens: maxCompletionTokens,
     }),
-  });
+  }, 12000); // 12 seconds timeout for Groq
 
   if (!response.ok) {
     const errorBody = await response.text();

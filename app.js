@@ -542,7 +542,14 @@ async function callAgent(agentKey, extraInputs = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentType: agentKey, companyProfile: company, agentInputs: inputs }),
     });
-    const data = await res.json();
+    const contentType = res.headers.get("content-type");
+    let data;
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Server error (Status ${res.status}): ${text.slice(0, 100) || "Gateway Timeout / Bad Gateway"}`);
+    }
     if (!res.ok || !data.ok) {
       throw new Error(data.error || `Request failed with status ${res.status}.`);
     }
