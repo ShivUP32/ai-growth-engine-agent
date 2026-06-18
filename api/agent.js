@@ -78,27 +78,58 @@ async function scrapeUrl(url, apiKey) {
   return text;
 }
 
-// Search using Jina Search
-async function searchWeb(query, apiKey) {
+// Search using Jina Search with optional JSON formatting to retrieve raw search engine snippets/metadata
+async function searchWeb(query, apiKey, jsonResponse = false) {
   if (!query) return "";
-  const cacheKey = `search:${query}`;
+  const cacheKey = `search:${query}:${jsonResponse}`;
   if (jinaCache.has(cacheKey)) {
-    console.log(`[Cache Hit] Reusing search results for: "${query}"`);
+    console.log(`[Cache Hit] Reusing search results for: "${query}" (json=${jsonResponse})`);
     return jinaCache.get(cacheKey);
   }
 
   if (!apiKey) {
     throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
   }
+
+  const headers = {
+    "Authorization": `Bearer ${apiKey}`
+  };
+  if (jsonResponse) {
+    headers["Accept"] = "application/json";
+  }
+
   const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
-    headers: {
-      "Authorization": `Bearer ${apiKey}`
-    }
+    headers
   }, 1800);
+
   if (!response.ok) {
     throw new Error(`Jina Search returned status ${response.status}`);
   }
-  const text = await response.text();
+
+  let text = "";
+  if (jsonResponse) {
+    try {
+      const data = await response.json();
+      if (data && data.data && Array.isArray(data.data)) {
+        let resultsText = "";
+        data.data.forEach((item, index) => {
+          resultsText += `\n[Result ${index + 1}]\n`;
+          resultsText += `Title: ${item.title || "No Title"}\n`;
+          resultsText += `URL: ${item.url || "No URL"}\n`;
+          resultsText += `Snippet/Summary: ${item.description || "No description available"}\n`;
+          resultsText += `---\n`;
+        });
+        text = resultsText.trim();
+      }
+    } catch (err) {
+      console.warn("[Jina Search] Failed to parse JSON response, falling back to text:", err.message);
+    }
+  }
+
+  if (!text) {
+    text = await response.text();
+  }
+
   cleanCacheIfFull();
   jinaCache.set(cacheKey, text);
   return text;
@@ -276,23 +307,24 @@ export default async function handler(req, res) {
       const competitors = companyProfile.competitors || "";
       const compList = competitors.split(",").map(c => c.trim()).filter(Boolean).slice(0, 3);
       
-      const mainQuery = `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim();
-      const queries = [mainQuery];
+      const queries = [
+        { q: `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim(), json: false }
+      ];
       for (const comp of compList) {
-        queries.push(`"${comp}" linkedin followers OR company profile size`);
+        queries.push({ q: `"${comp}" linkedin followers OR company profile size`, json: true });
       }
 
-      const searchPromises = queries.map(async (q) => {
+      const searchPromises = queries.map(async (item) => {
         try {
-          console.log(`[Jina] Running search for market-intel: "${q}"`);
-          const results = await searchWeb(q, jinaApiKey);
+          console.log(`[Jina] Running search for market-intel: "${item.q}" (json=${item.json})`);
+          const results = await searchWeb(item.q, jinaApiKey, item.json);
           if (results) {
-            searchBlocks.push(`### Search Results for: "${q}"\n\n${results}`);
-            executedTools.push(`Jina Search ("${q}")`);
+            searchBlocks.push(`### Search Results for: "${item.q}"\n\n${results}`);
+            executedTools.push(`Jina Search ("${item.q}")`);
             jinaSucceeded = true;
           }
         } catch (err) {
-          console.error(`[Jina] Search failed for market-intel query "${q}":`, err.message);
+          console.error(`[Jina] Search failed for market-intel query "${item.q}":`, err.message);
         }
       });
 
