@@ -58,7 +58,10 @@ function getRemainingTimeout(startTime, maxTimeout, bufferMs = 1000) {
   if (!startTime) return maxTimeout;
   const elapsed = Date.now() - startTime;
   const remaining = 9500 - elapsed - bufferMs; // Capping total to 9.5 seconds to be safe
-  return Math.min(maxTimeout, Math.max(remaining, 1000)); // Minimum of 1000ms
+  if (remaining <= 500) {
+    throw new Error("Timeout budget exceeded");
+  }
+  return Math.min(maxTimeout, remaining);
 }
 
 
@@ -104,6 +107,13 @@ async function scrapeUrl(url, apiKey, startTime) {
     return truncatedText;
   } catch (err) {
     if (fallbackKey && fallbackKey !== primaryKey) {
+      if (process.env.VERCEL && startTime) {
+        const remaining = 9500 - (Date.now() - startTime);
+        if (remaining < 3000) {
+          console.warn(`[Jina Reader] Skipping fallback key due to low remaining time (${remaining}ms).`);
+          throw err;
+        }
+      }
       console.warn(`[Jina Reader] Primary API key failed: ${err.message}. Retrying with fallback key...`);
       try {
         const text = await runScrape(fallbackKey);
@@ -188,6 +198,13 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
     return truncatedText;
   } catch (err) {
     if (fallbackKey && fallbackKey !== primaryKey) {
+      if (process.env.VERCEL && startTime) {
+        const remaining = 9500 - (Date.now() - startTime);
+        if (remaining < 3000) {
+          console.warn(`[Jina Search] Skipping fallback key due to low remaining time (${remaining}ms).`);
+          throw err;
+        }
+      }
       console.warn(`[Jina Search] Primary API key failed: ${err.message}. Retrying with fallback key...`);
       try {
         const text = await runSearch(fallbackKey);
@@ -316,6 +333,13 @@ async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, tempera
     console.error(`[Groq] Failed for model "${model}":`, groqErr.message);
     if (!orApiKey) {
       throw groqErr;
+    }
+    if (process.env.VERCEL && startTime) {
+      const remaining = 9500 - (Date.now() - startTime);
+      if (remaining < 2500) {
+        console.warn(`[OpenRouter Fallback] Skipping OpenRouter fallback due to low remaining time (${remaining}ms).`);
+        throw groqErr;
+      }
     }
     const orModel = getOpenRouterModel(model);
     try {
