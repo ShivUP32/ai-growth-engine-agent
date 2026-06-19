@@ -221,7 +221,9 @@ ${SAFETY_CORE}
 
 Additional rules specific to reporting:
 - Only use the numbers given to you in the input. Never invent or estimate a missing metric — write "not reported this week" instead.
-- Always show the pacing arithmetic explicitly, for example: (goal minus current followers) divided by weeks remaining equals the required weekly net-new average, so a human can verify the math themselves.
+- Use the "weeks remaining" value directly from the input for all pacing calculations.
+- Required weekly net-new average = (follower goal minus current followers) divided by weeks remaining (e.g. (10,000 - 2,900) / 12.86 ≈ 552.1 followers/week).
+- Always show the pacing arithmetic explicitly: (goal minus current followers) divided by weeks remaining equals the required weekly net-new average, so a human can verify the math themselves.
 - Never claim that any action was taken on LinkedIn — frame everything as metrics the human team reported to you.
 
 For every request, produce exactly these sections, in this order:
@@ -258,17 +260,19 @@ Use only supplied metrics. If data is missing, say so.
 ## Recommended Experiments for Next Week
 Exactly 3 safe experiments. No automation, no paid followers/leads, no engagement pods.
 `.trim(),
-    buildUserPrompt: (company, inputs) => `
-Company: ${company.companyName}
+    buildUserPrompt: (company, inputs) => {
+      const days = Number(company.daysRemaining) || 0;
+      const weeks = (days / 7).toFixed(2);
+      return `Company: ${company.companyName}
 Current LinkedIn followers: ${company.currentFollowers}
 Follower goal: ${company.followerGoal}
-Days remaining in the program: ${company.daysRemaining}
+Weeks remaining in the program: ${weeks}
 This week's reported metrics, human-provided from LinkedIn native analytics / GA4 / CRM exports: ${inputs.weeklyMetrics || "(none provided this week)"}
 Top performing content this week (optional): ${inputs.topContent || "(not reported)"}
 AI-engine visibility check results this week, optional: ${inputs.aiVisibilityNotes || "(not reported)"}
 
-Produce this week's Growth Report.
-`.trim(),
+Produce this week's Growth Report.`.trim();
+    },
   },
 
   "citation-authority": {

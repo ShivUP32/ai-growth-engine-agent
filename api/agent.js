@@ -219,7 +219,7 @@ function getOpenRouterModel(groqModel) {
 async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens, isFallbackCall = false, startTime }) {
   const endpoint = "https://openrouter.ai/api/v1/chat/completions";
   try {
-    const timeout = getRemainingTimeout(startTime, 3000, 1000); // 3s max timeout, reserve 1s for overhead
+    const timeout = getRemainingTimeout(startTime, 6000, 1000); // 6s max timeout, reserve 1s for overhead
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
       headers: {
@@ -686,7 +686,7 @@ async function callGroq({ apiKey, model, messages, temperature, maxCompletionTok
       temperature,
       max_completion_tokens: maxCompletionTokens,
     }),
-  }, getRemainingTimeout(startTime, 3500, 1000)); // 3.5s max timeout, budget 1s
+  }, getRemainingTimeout(startTime, 6000, 1000)); // 6s max timeout, budget 1s
 
   if (!response.ok) {
     const errorBody = await response.text();
