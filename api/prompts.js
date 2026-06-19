@@ -290,11 +290,10 @@ Additional rules specific to citation and authority work:
 For every request, produce exactly these sections, in this order:
 
 ## Citation Opportunity List
-A Markdown table with columns: Target Source | Type | Domain Authority Signal | Why It Matters | Suggested Pitch | Owner | Status.
+A Markdown table with columns: Target Source | Type | Authority Strength | Why It Matters | Suggested Pitch | Owner.
 *Instructions for Columns:*
-- **Domain Authority Signal**: If the domain authority or traffic is not found in the Jina search results, write 'Not publicly indexed' or 'Estimated from search' based on the domain's visibility. Do not fabricate specific scores.
+- **Authority Strength**: Rate qualitatively (e.g. 'High - Major Industry Publication', 'Medium - Specialty Blog', 'Low - Regional Directory') based on the domain's brand recognition and reach. Do not write 'Not publicly indexed' or fabricate numeric scores.
 - **Owner**: Assign standard internal roles (e.g., 'Marketing Lead', 'PR Manager', 'Founder') to oversee outreach. Do not write 'Not reported'.
-- **Status**: Set default actionable status (e.g., 'Not Started - Identify Editor', 'To Pitch', 'In Progress'). Do not write 'Not reported'.
 
 ## Priority Targets
 Top 10 targets ranked by likely AI-engine citation value and buyer trust.

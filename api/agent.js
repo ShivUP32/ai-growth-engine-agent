@@ -87,13 +87,10 @@ async function searchWeb(query, apiKey, jsonResponse = false) {
     return jinaCache.get(cacheKey);
   }
 
-  if (!apiKey) {
-    throw new Error("JINA_API_KEY is not configured. Jina Search requires an API key.");
+  const headers = {};
+  if (apiKey) {
+    headers["Authorization"] = `Bearer ${apiKey}`;
   }
-
-  const headers = {
-    "Authorization": `Bearer ${apiKey}`
-  };
   if (jsonResponse) {
     headers["Accept"] = "application/json";
   }
