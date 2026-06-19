@@ -148,7 +148,7 @@ def build_pdf():
     pdf.cell(45, 5, "Release Version:")
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*TEXT_DARK)
-    pdf.cell(0, 5, "v1.3.3", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, "v1.3.4", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_text_color(*PRIMARY)
@@ -231,6 +231,34 @@ def build_pdf():
         "High-velocity LLM inference. To prevent rate-limit failures, the backend implements a sequential OpenRouter "
         "fallback chain (Gemini Free -> GPT-OSS-120B -> Nemotron 3 Nano) to resolve requests when Groq fails."
     )
+
+    # Vercel Hobby Timeout Warning Box
+    pdf.ln(3)
+    current_y = pdf.get_y()
+    pdf.set_fill_color(255, 243, 205)  # Light yellow warning background
+    pdf.set_draw_color(255, 193, 7)    # Yellow border
+    pdf.rect(20, current_y, 170, 26, "DF")
+    
+    pdf.set_y(current_y + 2.5)
+    pdf.set_left_margin(24)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.set_text_color(133, 100, 4)    # Dark yellow text
+    pdf.cell(162, 4, "IMPORTANT DEPLOYMENT NOTE", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Helvetica", "", 8.5)
+    pdf.set_text_color(*TEXT_DARK)
+    pdf.ln(1)
+    
+    note_text = (
+        "Due to Vercel free plan constraints of a 10-second operation timeout, the quality of "
+        "output is limited and can be elevated easily if run on local with API keys for better "
+        "quality output, bypassing Vercel's serverless execution limits."
+    )
+    pdf.multi_cell(162, 4.2, note_text, new_x="LMARGIN", new_y="NEXT")
+    
+    # Restore standard margins
+    pdf.set_left_margin(20)
+    pdf.set_y(current_y + 26)
+    pdf.ln(2)
 
     # ==========================================
     # PAGE 3: SEQUENTIAL WORKFLOW & AGENTS
