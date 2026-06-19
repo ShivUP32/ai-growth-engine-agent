@@ -12,6 +12,7 @@ const ARCHIVE_MANIFEST = path.join(ARCHIVE_DIR, 'version_manifest.json');
 const FILES_TO_ARCHIVE = [
   'api/agent.js',
   'api/prompts.js',
+  'api/version.js',
   'app.js',
   'index.html',
   'styles.css',
