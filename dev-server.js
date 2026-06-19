@@ -7,8 +7,11 @@ import { exec } from 'child_process';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 1. Simple .env.local loader
-const envPath = path.join(__dirname, '.env.local');
+// 1. Simple environment variables loader
+let envPath = path.join(__dirname, '.env.local');
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(__dirname, '.env.local.txt');
+}
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
   envContent.split('\n').forEach(line => {
@@ -22,9 +25,9 @@ if (fs.existsSync(envPath)) {
       }
     }
   });
-  console.log('⚡ Loaded .env.local variables');
+  console.log(`⚡ Loaded environment variables from: ${path.basename(envPath)}`);
 } else {
-  console.log('⚠️  No .env.local file found. Please create one with GROQ_API_KEY.');
+  console.log('⚠️  No .env.local or .env.local.txt file found. Please create one with GROQ_API_KEY.');
 }
 
 const PORT = 3008;
