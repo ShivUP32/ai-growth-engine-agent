@@ -86,7 +86,7 @@ async function scrapeUrl(url, apiKey, startTime) {
     if (key) {
       headers["Authorization"] = `Bearer ${key}`;
     }
-    const timeout = getRemainingTimeout(startTime, 3000, 5000); // 3s max timeout, reserve 5s for LLMs
+    const timeout = getRemainingTimeout(startTime, 4500, 3500); // 4.5s max timeout, reserve 3.5s for LLMs
     const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, timeout);
     if (!response.ok) {
       throw new Error(`Jina Reader returned status ${response.status}`);
@@ -142,7 +142,7 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
       headers["Accept"] = "application/json";
     }
 
-    const timeout = getRemainingTimeout(startTime, 3000, 5000); // 3s max timeout, reserve 5s for LLMs
+    const timeout = getRemainingTimeout(startTime, 4500, 3500); // 4.5s max timeout, reserve 3.5s for LLMs
     const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
       headers
     }, timeout);
