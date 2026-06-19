@@ -50,6 +50,11 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
 
 // Helper to budget remaining time dynamically to prevent 504 timeouts on Vercel Hobby plan (10s limit)
 function getRemainingTimeout(startTime, maxTimeout, bufferMs = 1000) {
+  if (!process.env.VERCEL) {
+    // On localhost, we bypass Vercel's strict 10s timeout budget:
+    // allow up to 15s for crawler/search queries, and 60s for LLM operations.
+    return maxTimeout <= 3500 ? 15000 : 60000;
+  }
   if (!startTime) return maxTimeout;
   const elapsed = Date.now() - startTime;
   const remaining = 9500 - elapsed - bufferMs; // Capping total to 9.5 seconds to be safe
@@ -265,8 +270,8 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
     let lastError = err;
     let attempted = 0;
     for (const fbModel of fallbackList) {
-      // Fast check: If we have less than 2.2 seconds left, skip retrying to avoid 504 Gateway Timeout on Vercel
-      if (startTime) {
+      // Fast check: If we are on Vercel and have less than 2.2 seconds left, skip retrying to avoid 504 Gateway Timeout
+      if (process.env.VERCEL && startTime) {
         const remaining = 9500 - (Date.now() - startTime);
         if (remaining < 2200) {
           console.warn(`[OpenRouter Fallback Chain] Skipping remaining fallback models due to time constraints (${remaining}ms left).`);
