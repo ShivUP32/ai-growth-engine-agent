@@ -72,7 +72,7 @@ async function scrapeUrl(url, apiKey) {
     if (key) {
       headers["Authorization"] = `Bearer ${key}`;
     }
-    const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 1800);
+    const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 3500);
     if (!response.ok) {
       throw new Error(`Jina Reader returned status ${response.status}`);
     }
@@ -123,7 +123,7 @@ async function searchWeb(query, apiKey, jsonResponse = false) {
 
     const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
       headers
-    }, 1800);
+    }, 3500);
 
     if (!response.ok) {
       throw new Error(`Jina Search returned status ${response.status}`);
