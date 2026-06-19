@@ -357,6 +357,15 @@ async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, tempera
   }
 }
 
+function formatAgentOutput(agentType, markdown) {
+  if (!markdown) return "";
+  if (agentType === "geo-visibility") {
+    // Convert any "### H1:", "### Title:", "### Meta Title:", "### Meta Description:", etc. into bold bullet points
+    return markdown.replace(/^###\s*(H1|Title|Meta Title|Meta Description|Answer-Style Definition|Answer Definition|Section Outline|FAQ Block|Internal Links|Schema Recommendation|Schema\.org Recommendation|Schema|CTA)(?:\s*:)?\s*/gim, "- **$1**: ");
+  }
+  return markdown;
+}
+
 export default async function handler(req, res) {
   const startTime = Date.now();
   if (req.method !== "POST") {
@@ -374,6 +383,15 @@ export default async function handler(req, res) {
   }
 
   const { agentType, companyProfile, agentInputs } = body || {};
+
+  // Intercept res.json to post-process markdown formatting
+  const originalJson = res.json;
+  res.json = function(data) {
+    if (data && data.ok && typeof data.markdown === "string") {
+      data.markdown = formatAgentOutput(agentType, data.markdown);
+    }
+    return originalJson.call(this, data);
+  };
 
   if (!agentType || !AGENT_CONFIG[agentType]) {
     return res.status(400).json({
