@@ -367,7 +367,7 @@ export default async function handler(req, res) {
 
       await Promise.all([...scrapePromises, searchPromise]);
     } else if (agentType === "citation-authority") {
-      const query = `top B2B directories listings and categories for ${companyProfile.icp}`.trim();
+      const query = `top B2B directories listings and categories for ${companyProfile.icp || "B2B software SaaS"}`.trim();
       try {
         console.log(`[Jina] Running search for citation-authority: "${query}"`);
         const results = await searchWeb(query, jinaApiKey);
