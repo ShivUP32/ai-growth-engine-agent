@@ -148,7 +148,7 @@ def build_pdf():
     pdf.cell(45, 5, "Release Version:")
     pdf.set_font("Helvetica", "", 9)
     pdf.set_text_color(*TEXT_DARK)
-    pdf.cell(0, 5, "v1.3.0", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 5, "v1.3.1", new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font("Helvetica", "B", 9)
     pdf.set_text_color(*PRIMARY)

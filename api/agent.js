@@ -82,16 +82,22 @@ async function scrapeUrl(url, apiKey) {
   try {
     const text = await runScrape(primaryKey);
     cleanCacheIfFull();
-    jinaCache.set(cacheKey, text);
-    return text;
+    const truncatedText = text && text.length > 5000
+      ? text.slice(0, 5000) + "\n\n[Note: Scraped page content truncated for context size limits]"
+      : text;
+    jinaCache.set(cacheKey, truncatedText);
+    return truncatedText;
   } catch (err) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       console.warn(`[Jina Reader] Primary API key failed: ${err.message}. Retrying with fallback key...`);
       try {
         const text = await runScrape(fallbackKey);
         cleanCacheIfFull();
-        jinaCache.set(cacheKey, text);
-        return text;
+        const truncatedText = text && text.length > 5000
+          ? text.slice(0, 5000) + "\n\n[Note: Scraped page content truncated for context size limits]"
+          : text;
+        jinaCache.set(cacheKey, truncatedText);
+        return truncatedText;
       } catch (fallbackErr) {
         throw new Error(`Primary key failed (${err.message}) and fallback key failed (${fallbackErr.message})`);
       }
@@ -159,16 +165,22 @@ async function searchWeb(query, apiKey, jsonResponse = false) {
   try {
     const text = await runSearch(primaryKey);
     cleanCacheIfFull();
-    jinaCache.set(cacheKey, text);
-    return text;
+    const truncatedText = text && text.length > 5000
+      ? text.slice(0, 5000) + "\n\n[Note: Search results truncated for context size limits]"
+      : text;
+    jinaCache.set(cacheKey, truncatedText);
+    return truncatedText;
   } catch (err) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       console.warn(`[Jina Search] Primary API key failed: ${err.message}. Retrying with fallback key...`);
       try {
         const text = await runSearch(fallbackKey);
         cleanCacheIfFull();
-        jinaCache.set(cacheKey, text);
-        return text;
+        const truncatedText = text && text.length > 5000
+          ? text.slice(0, 5000) + "\n\n[Note: Search results truncated for context size limits]"
+          : text;
+        jinaCache.set(cacheKey, truncatedText);
+        return truncatedText;
       } catch (fallbackErr) {
         throw new Error(`Primary key failed (${err.message}) and fallback key failed (${fallbackErr.message})`);
       }
@@ -482,6 +494,14 @@ export default async function handler(req, res) {
   if (searchBlocks.length > 0) {
     groundedContext += `\n\n<search_results>\n${searchBlocks.join("\n\n")}\n</search_results>\n`;
   }
+
+  // Layer 2 Guard: Cap total grounding context at 15,000 characters (~3,750 tokens) to protect TPM and model context limits
+  const MAX_GROUNDING_CHARS = 15000;
+  if (groundedContext.length > MAX_GROUNDING_CHARS) {
+    console.warn(`[Context Guard] Grounded context length (${groundedContext.length} chars) exceeds safety limits. Truncating to ${MAX_GROUNDING_CHARS} chars.`);
+    groundedContext = groundedContext.slice(0, MAX_GROUNDING_CHARS) + "\n\n[Note: Grounding context truncated to fit model context / TPM limits]";
+  }
+
   if (groundedContext) {
     groundedContext += `\n\n[INSTRUCTION] Analyze and incorporate the real-time search results and scraped webpage contents above into your analysis and recommendations.`;
   }
