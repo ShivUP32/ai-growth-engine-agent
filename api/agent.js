@@ -256,11 +256,10 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
     console.log(`[OpenRouter Fallback Chain] Primary model "${model}" failed. Triggering sequential multi-model fallback chain...`);
 
     const fallbackList = [
-      "google/gemini-2.5-flash:free",
-      "google/gemini-2.5-pro:free",
+      "google/gemini-2.5-flash",
+      "google/gemini-2.5-pro",
       "google/gemini-2.0-flash-exp:free",
-      "openai/gpt-oss-120b:free",
-      "nvidia/nemotron-3-nano-30b-a3b:free"
+      "meta-llama/llama-3-8b-instruct:free"
     ];
 
     let lastError = err;
