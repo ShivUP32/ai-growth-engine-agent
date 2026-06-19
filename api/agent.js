@@ -424,7 +424,8 @@ export default async function handler(req, res) {
   try {
     if (agentType === "market-intel") {
       const competitors = companyProfile.competitors || "";
-      const compList = competitors.split(",").map(c => c.trim()).filter(Boolean).slice(0, 3);
+      const maxComps = process.env.VERCEL ? 1 : 3;
+      const compList = competitors.split(",").map(c => c.trim()).filter(Boolean).slice(0, maxComps);
       
       const queries = [
         { q: `${companyProfile.companyName} vs ${competitors} category positioning share of voice`.trim(), json: false }
@@ -450,7 +451,8 @@ export default async function handler(req, res) {
       await Promise.all(searchPromises);
     } else if (agentType === "geo-visibility") {
       const blogUrlsStr = agentInputs.blogUrls || "";
-      const urlsToScrape = extractUrls(blogUrlsStr).slice(0, 3);
+      const maxUrls = process.env.VERCEL ? 1 : 3;
+      const urlsToScrape = extractUrls(blogUrlsStr).slice(0, maxUrls);
       
       const scrapePromises = urlsToScrape.map(async (url) => {
         try {
@@ -516,7 +518,8 @@ export default async function handler(req, res) {
       }
     } else if (agentType === "conversion-repurposing") {
       const sourceAssetStr = agentInputs.sourceAsset || "";
-      const urlsToScrape = extractUrls(sourceAssetStr).slice(0, 3);
+      const maxUrls = process.env.VERCEL ? 1 : 3;
+      const urlsToScrape = extractUrls(sourceAssetStr).slice(0, maxUrls);
       
       const scrapePromises = urlsToScrape.map(async (url) => {
         try {
