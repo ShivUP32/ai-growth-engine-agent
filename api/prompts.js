@@ -174,7 +174,15 @@ Include H1, meta title, meta description, 40-60 word answer-style definition, se
 
 ## Answer-Engine Citation Testing Protocol
 A Markdown table with columns: Query | Engine | VoiceCare Mentioned? | Position | Competitors Mentioned | Sources Cited | Content Type Cited | Why VoiceCare Was Included/Excluded | Action.
-*Note: If you do not have actual audit data or notes for a query/engine combination, write 'Not audited' or 'No data supplied' instead. Do not fabricate positions or competitor mentions.*
+*Instructions for Grounding:*
+- If manual AI-engine test notes are supplied in the user inputs, use them to populate the table.
+- If no manual test notes are supplied, analyze the Jina search results for the target query and use them as a proxy for what AI search engines (ChatGPT, Perplexity, Gemini) retrieve:
+  - **VoiceCare Mentioned?**: State 'Yes', 'No', or 'Not found in search' based on whether VoiceCare appears in the search results.
+  - **Position**: State the ranking position in the search results (e.g. '#2 Notable, Not in Top 10 VoiceCare').
+  - **Competitors Mentioned**: List competitors found in the search results.
+  - **Sources Cited**: List the ranking domains (e.g. mobihealthnews.com, infiniteai.com).
+  - **Content Type Cited**: Identify the ranking content format (e.g. Blog, Landing Page, PR News).
+  - **Why VoiceCare Was Included/Excluded**: Provide a strategic rationale based on the search results (e.g., 'Excluded: competitors have highly optimized landing pages for this term, whereas VoiceCare only has a general blog post').
 
 ## Content Gap Summary
 2-3 sentences on what evidence, pages, citations, or freshness signals are likely missing.
