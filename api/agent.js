@@ -48,6 +48,15 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
   }
 }
 
+// Helper to budget remaining time dynamically to prevent 504 timeouts on Vercel Hobby plan (10s limit)
+function getRemainingTimeout(startTime, maxTimeout, bufferMs = 1000) {
+  if (!startTime) return maxTimeout;
+  const elapsed = Date.now() - startTime;
+  const remaining = 9500 - elapsed - bufferMs; // Capping total to 9.5 seconds to be safe
+  return Math.min(maxTimeout, Math.max(remaining, 1000)); // Minimum of 1000ms
+}
+
+
 // Extract URLs from a string
 function extractUrls(str) {
   if (!str) return [];
@@ -56,7 +65,7 @@ function extractUrls(str) {
 }
 
 // Scrape a URL using Jina Reader
-async function scrapeUrl(url, apiKey) {
+async function scrapeUrl(url, apiKey, startTime) {
   if (!url) return "";
   const cacheKey = `scrape:${url}`;
   if (jinaCache.has(cacheKey)) {
@@ -72,7 +81,8 @@ async function scrapeUrl(url, apiKey) {
     if (key) {
       headers["Authorization"] = `Bearer ${key}`;
     }
-    const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 3500);
+    const timeout = getRemainingTimeout(startTime, 3000, 5000); // 3s max timeout, reserve 5s for LLMs
+    const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, timeout);
     if (!response.ok) {
       throw new Error(`Jina Reader returned status ${response.status}`);
     }
@@ -107,7 +117,7 @@ async function scrapeUrl(url, apiKey) {
 }
 
 // Search using Jina Search with optional JSON formatting to retrieve raw search engine snippets/metadata
-async function searchWeb(query, apiKey, jsonResponse = false) {
+async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
   if (!query) return "";
   const cacheKey = `search:${query}:${jsonResponse}`;
   if (jinaCache.has(cacheKey)) {
@@ -127,9 +137,10 @@ async function searchWeb(query, apiKey, jsonResponse = false) {
       headers["Accept"] = "application/json";
     }
 
+    const timeout = getRemainingTimeout(startTime, 3000, 5000); // 3s max timeout, reserve 5s for LLMs
     const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
       headers
-    }, 3500);
+    }, timeout);
 
     if (!response.ok) {
       throw new Error(`Jina Search returned status ${response.status}`);
@@ -200,9 +211,10 @@ function getOpenRouterModel(groqModel) {
 }
 
 // Call OpenRouter API
-async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens, isFallbackCall = false }) {
+async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens, isFallbackCall = false, startTime }) {
   const endpoint = "https://openrouter.ai/api/v1/chat/completions";
   try {
+    const timeout = getRemainingTimeout(startTime, 3000, 1000); // 3s max timeout, reserve 1s for overhead
     const response = await fetchWithTimeout(endpoint, {
       method: "POST",
       headers: {
@@ -217,7 +229,7 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
         temperature,
         max_tokens: maxTokens,
       }),
-    }, 6000); // 6 seconds timeout for OpenRouter
+    }, timeout);
 
     if (!response.ok) {
       const errorBody = await response.text();
@@ -244,25 +256,30 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
     console.log(`[OpenRouter Fallback Chain] Primary model "${model}" failed. Triggering sequential multi-model fallback chain...`);
 
     const fallbackList = [
-      // 1. Gemini free API (best available)
       "google/gemini-2.5-flash:free",
       "google/gemini-2.5-pro:free",
       "google/gemini-2.0-flash-exp:free",
-      "google/gemini-flash-1.5-8b:free",
-      "google/gemini-1.5-flash:free",
-      "google/gemini-1.5-pro:free",
-
-      // 2. GPT-OSS-120B by OpenAI
-      "openai/gpt-oss-120b",
       "openai/gpt-oss-120b:free",
-
-      // 3. Nemotron 3 Nano 30B A3B
-      "nvidia/nemotron-3-nano-30b-a3b:free",
-      "nvidia/nemotron-3-nano-30b-a3b"
+      "nvidia/nemotron-3-nano-30b-a3b:free"
     ];
 
     let lastError = err;
+    let attempted = 0;
     for (const fbModel of fallbackList) {
+      // Fast check: If we have less than 2.2 seconds left, skip retrying to avoid 504 Gateway Timeout on Vercel
+      if (startTime) {
+        const remaining = 9500 - (Date.now() - startTime);
+        if (remaining < 2200) {
+          console.warn(`[OpenRouter Fallback Chain] Skipping remaining fallback models due to time constraints (${remaining}ms left).`);
+          break;
+        }
+      }
+      if (attempted >= 2) {
+        console.warn(`[OpenRouter Fallback Chain] Capping retries at 2 models to keep execution fast.`);
+        break;
+      }
+      attempted++;
+
       try {
         console.log(`[OpenRouter Fallback Chain] Trying fallback model "${fbModel}"...`);
         const res = await callOpenRouter({
@@ -271,7 +288,8 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
           messages,
           temperature,
           maxTokens,
-          isFallbackCall: true // prevent recursion
+          isFallbackCall: true, // prevent recursion
+          startTime
         });
         console.log(`[OpenRouter Fallback Chain] Success! Used fallback model "${fbModel}"`);
         return { content: res.content, model: `${fbModel} (OpenRouter Fallback)` };
@@ -286,9 +304,9 @@ async function callOpenRouter({ apiKey, model, messages, temperature, maxTokens,
 }
 
 // Helper wrapper to try Groq first, and if failed, try OpenRouter fallback
-async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, temperature, maxCompletionTokens }) {
+async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, temperature, maxCompletionTokens, startTime }) {
   try {
-    const res = await callGroq({ apiKey, model, messages, temperature, maxCompletionTokens });
+    const res = await callGroq({ apiKey, model, messages, temperature, maxCompletionTokens, startTime });
     return { content: res.content, provider: "Groq", model: model, executedTools: res.executedTools };
   } catch (groqErr) {
     console.error(`[Groq] Failed for model "${model}":`, groqErr.message);
@@ -298,7 +316,7 @@ async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, tempera
     const orModel = getOpenRouterModel(model);
     try {
       console.log(`[OpenRouter] Falling back to OpenRouter model "${orModel}"`);
-      const res = await callOpenRouter({ apiKey: orApiKey, model: orModel, messages, temperature, maxTokens: maxCompletionTokens });
+      const res = await callOpenRouter({ apiKey: orApiKey, model: orModel, messages, temperature, maxTokens: maxCompletionTokens, startTime });
       let finalModelName = res.model || orModel;
       if (!finalModelName.includes("OpenRouter")) {
         finalModelName = `${finalModelName} (OpenRouter)`;
@@ -312,6 +330,7 @@ async function callGroqOrOpenRouter({ apiKey, orApiKey, model, messages, tempera
 }
 
 export default async function handler(req, res) {
+  const startTime = Date.now();
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({ ok: false, error: "Method not allowed. Use POST." });
@@ -371,7 +390,7 @@ export default async function handler(req, res) {
       const searchPromises = queries.map(async (item) => {
         try {
           console.log(`[Jina] Running search for market-intel: "${item.q}" (json=${item.json})`);
-          const results = await searchWeb(item.q, jinaApiKey, item.json);
+          const results = await searchWeb(item.q, jinaApiKey, item.json, startTime);
           if (results) {
             searchBlocks.push(`### Search Results for: "${item.q}"\n\n${results}`);
             executedTools.push(`Jina Search ("${item.q}")`);
@@ -390,7 +409,7 @@ export default async function handler(req, res) {
       const scrapePromises = urlsToScrape.map(async (url) => {
         try {
           console.log(`[Jina] Scraping blog URL: ${url}`);
-          const content = await scrapeUrl(url, jinaApiKey);
+          const content = await scrapeUrl(url, jinaApiKey, startTime);
           if (content) {
             scrapedPages.push(`### Scraped Content from: ${url}\n\n${content}`);
             executedTools.push(`Jina Reader (${url})`);
@@ -407,7 +426,7 @@ export default async function handler(req, res) {
         searchPromise = (async () => {
           try {
             console.log(`[Jina] Running search for geo-visibility: "${targetQuery}"`);
-            const results = await searchWeb(targetQuery, jinaApiKey);
+            const results = await searchWeb(targetQuery, jinaApiKey, false, startTime);
             if (results) {
               searchBlocks.push(results);
               executedTools.push("Jina Search");
@@ -424,7 +443,7 @@ export default async function handler(req, res) {
       const query = `top B2B directories listings and categories for ${companyProfile.icp || "B2B software SaaS"}`.trim();
       try {
         console.log(`[Jina] Running search for citation-authority: "${query}"`);
-        const results = await searchWeb(query, jinaApiKey);
+        const results = await searchWeb(query, jinaApiKey, false, startTime);
         if (results) {
           searchBlocks.push(results);
           executedTools.push("Jina Search");
@@ -439,7 +458,7 @@ export default async function handler(req, res) {
         const query = `${topic} ${companyProfile.icp || ""} industry news trends`.trim();
         try {
           console.log(`[Jina] Running search for linkedin-content: "${query}"`);
-          const results = await searchWeb(query, jinaApiKey);
+          const results = await searchWeb(query, jinaApiKey, false, startTime);
           if (results) {
             searchBlocks.push(results);
             executedTools.push("Jina Search");
@@ -456,7 +475,7 @@ export default async function handler(req, res) {
       const scrapePromises = urlsToScrape.map(async (url) => {
         try {
           console.log(`[Jina] Scraping conversion source asset: ${url}`);
-          const content = await scrapeUrl(url, jinaApiKey);
+          const content = await scrapeUrl(url, jinaApiKey, startTime);
           if (content) {
             scrapedPages.push(`### Scraped Content from: ${url}\n\n${content}`);
             executedTools.push(`Jina Reader (${url})`);
@@ -472,7 +491,7 @@ export default async function handler(req, res) {
       const query = `"${companyProfile.companyName}" news OR presence OR directories`.trim();
       try {
         console.log(`[Jina] Running search for growth-report: "${query}"`);
-        const results = await searchWeb(query, jinaApiKey);
+        const results = await searchWeb(query, jinaApiKey, false, startTime);
         if (results) {
           searchBlocks.push(results);
           executedTools.push("Jina Search");
@@ -525,6 +544,7 @@ export default async function handler(req, res) {
           messages,
           temperature: config.temperature,
           maxCompletionTokens: config.maxCompletionTokens,
+          startTime
         });
         return res.status(200).json({
           ok: true,
@@ -551,6 +571,7 @@ export default async function handler(req, res) {
           messages,
           temperature: config.temperature,
           maxCompletionTokens: config.maxCompletionTokens,
+          startTime
         });
         return res.status(200).json({
           ok: true,
@@ -577,6 +598,7 @@ export default async function handler(req, res) {
         messages,
         temperature: config.temperature,
         maxCompletionTokens: config.maxCompletionTokens,
+        startTime
       });
       return res.status(200).json({
         ok: true,
@@ -597,6 +619,7 @@ export default async function handler(req, res) {
               messages,
               temperature: config.temperature,
               maxTokens: config.maxCompletionTokens,
+              startTime
             });
             let finalModelName = fallback.model || orModel;
             if (!finalModelName.includes("OpenRouter")) {
@@ -627,6 +650,7 @@ export default async function handler(req, res) {
           messages,
           temperature: config.temperature,
           maxCompletionTokens: config.maxCompletionTokens,
+          startTime
         });
         return res.status(200).json({
           ok: true,
@@ -645,7 +669,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function callGroq({ apiKey, model, messages, temperature, maxCompletionTokens }) {
+async function callGroq({ apiKey, model, messages, temperature, maxCompletionTokens, startTime }) {
   const response = await fetchWithTimeout(GROQ_ENDPOINT, {
     method: "POST",
     headers: {
@@ -658,7 +682,7 @@ async function callGroq({ apiKey, model, messages, temperature, maxCompletionTok
       temperature,
       max_completion_tokens: maxCompletionTokens,
     }),
-  }, 6000); // 6 seconds timeout for Groq
+  }, getRemainingTimeout(startTime, 3500, 1000)); // 3.5s max timeout, budget 1s
 
   if (!response.ok) {
     const errorBody = await response.text();
