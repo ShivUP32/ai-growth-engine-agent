@@ -289,7 +289,10 @@ For every request, produce exactly these sections, in this order:
 
 ## Citation Opportunity List
 A Markdown table with columns: Target Source | Type | Domain Authority Signal | Why It Matters | Suggested Pitch | Owner | Status.
-*Note: If a target source's domain authority or traffic is not found in the search results, write 'Not publicly indexed' or 'Estimated from search'. Do not fabricate specific authority scores.*
+*Instructions for Columns:*
+- **Domain Authority Signal**: If the domain authority or traffic is not found in the Jina search results, write 'Not publicly indexed' or 'Estimated from search' based on the domain's visibility. Do not fabricate specific scores.
+- **Owner**: Assign standard internal roles (e.g., 'Marketing Lead', 'PR Manager', 'Founder') to oversee outreach. Do not write 'Not reported'.
+- **Status**: Set default actionable status (e.g., 'Not Started - Identify Editor', 'To Pitch', 'In Progress'). Do not write 'Not reported'.
 
 ## Priority Targets
 Top 10 targets ranked by likely AI-engine citation value and buyer trust.
@@ -334,12 +337,20 @@ For every request, produce exactly these sections, in this order:
 
 ## Conversion Asset Map
 A Markdown table with columns: Asset | Purpose | Buyer Stage | CTA | Owner | Priority.
+*Instructions for Columns:*
+- **Owner**: Assign standard team roles (e.g. 'Content Marketer', 'Designer', 'Product Manager'). Do not write 'Not reported'.
+- **Priority**: Assign logical priority (e.g. 'High', 'Medium', 'Low'). Do not write 'Not reported'.
 
 ## CTA Mapping
 A Markdown table with columns: Content Type | Recommended CTA | Destination Page | UTM Recommendation.
+*Instructions for Columns:*
+- **Destination Page**: Suggest logical paths (e.g., '/demo', '/solutions/prior-auth', '/resources/whitepaper') rather than leaving blank.
+- **UTM Recommendation**: Recommend standardized UTM formats (e.g. 'utm_source=linkedin&utm_medium=social&utm_campaign=prior_auth'). Do not write 'Not reported'.
 
 ## Repurposing Matrix
 A Markdown table with columns: Source Asset | Founder Posts | Company Posts | Carousel | Newsletter | Blog/FAQ | Sales Asset.
+*Note on Repurposing:*
+- If no source asset details or summaries are provided in the inputs, synthesize a highly relevant representative asset (e.g., for Healthcare RCM: "A Guide to Reducing Hospital Prior-Auth Wait Times") based on the company's ICP and product focus, and construct a complete, detailed repurposing matrix for it. Do not write 'Not reported'.
 
 ## Original Data / Benchmark Asset Ideas
 List safe benchmark/report ideas and evidence rules. No customer data or ROI claim unless approved.
