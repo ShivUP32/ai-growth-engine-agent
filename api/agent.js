@@ -64,18 +64,40 @@ async function scrapeUrl(url, apiKey) {
     return jinaCache.get(cacheKey);
   }
 
-  const headers = {};
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
+  const primaryKey = apiKey || process.env.JINA_API_KEY;
+  const fallbackKey = process.env.JINA_API_KEY_FALLBACK;
+
+  const runScrape = async (key) => {
+    const headers = {};
+    if (key) {
+      headers["Authorization"] = `Bearer ${key}`;
+    }
+    const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 1800);
+    if (!response.ok) {
+      throw new Error(`Jina Reader returned status ${response.status}`);
+    }
+    return await response.text();
+  };
+
+  try {
+    const text = await runScrape(primaryKey);
+    cleanCacheIfFull();
+    jinaCache.set(cacheKey, text);
+    return text;
+  } catch (err) {
+    if (fallbackKey && fallbackKey !== primaryKey) {
+      console.warn(`[Jina Reader] Primary API key failed: ${err.message}. Retrying with fallback key...`);
+      try {
+        const text = await runScrape(fallbackKey);
+        cleanCacheIfFull();
+        jinaCache.set(cacheKey, text);
+        return text;
+      } catch (fallbackErr) {
+        throw new Error(`Primary key failed (${err.message}) and fallback key failed (${fallbackErr.message})`);
+      }
+    }
+    throw err;
   }
-  const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, 1800);
-  if (!response.ok) {
-    throw new Error(`Jina Reader returned status ${response.status}`);
-  }
-  const text = await response.text();
-  cleanCacheIfFull();
-  jinaCache.set(cacheKey, text);
-  return text;
 }
 
 // Search using Jina Search with optional JSON formatting to retrieve raw search engine snippets/metadata
@@ -87,49 +109,72 @@ async function searchWeb(query, apiKey, jsonResponse = false) {
     return jinaCache.get(cacheKey);
   }
 
-  const headers = {};
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
-  }
-  if (jsonResponse) {
-    headers["Accept"] = "application/json";
-  }
+  const primaryKey = apiKey || process.env.JINA_API_KEY;
+  const fallbackKey = process.env.JINA_API_KEY_FALLBACK;
 
-  const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
-    headers
-  }, 1800);
-
-  if (!response.ok) {
-    throw new Error(`Jina Search returned status ${response.status}`);
-  }
-
-  let text = "";
-  if (jsonResponse) {
-    try {
-      const data = await response.json();
-      if (data && data.data && Array.isArray(data.data)) {
-        let resultsText = "";
-        data.data.forEach((item, index) => {
-          resultsText += `\n[Result ${index + 1}]\n`;
-          resultsText += `Title: ${item.title || "No Title"}\n`;
-          resultsText += `URL: ${item.url || "No URL"}\n`;
-          resultsText += `Snippet/Summary: ${item.description || "No description available"}\n`;
-          resultsText += `---\n`;
-        });
-        text = resultsText.trim();
-      }
-    } catch (err) {
-      console.warn("[Jina Search] Failed to parse JSON response, falling back to text:", err.message);
+  const runSearch = async (key) => {
+    const headers = {};
+    if (key) {
+      headers["Authorization"] = `Bearer ${key}`;
     }
-  }
+    if (jsonResponse) {
+      headers["Accept"] = "application/json";
+    }
 
-  if (!text) {
-    text = await response.text();
-  }
+    const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
+      headers
+    }, 1800);
 
-  cleanCacheIfFull();
-  jinaCache.set(cacheKey, text);
-  return text;
+    if (!response.ok) {
+      throw new Error(`Jina Search returned status ${response.status}`);
+    }
+
+    let text = "";
+    if (jsonResponse) {
+      try {
+        const data = await response.json();
+        if (data && data.data && Array.isArray(data.data)) {
+          let resultsText = "";
+          data.data.forEach((item, index) => {
+            resultsText += `\n[Result ${index + 1}]\n`;
+            resultsText += `Title: ${item.title || "No Title"}\n`;
+            resultsText += `URL: ${item.url || "No URL"}\n`;
+            resultsText += `Snippet/Summary: ${item.description || "No description available"}\n`;
+            resultsText += `---\n`;
+          });
+          text = resultsText.trim();
+        }
+      } catch (err) {
+        console.warn("[Jina Search] Failed to parse JSON response, falling back to text:", err.message);
+      }
+    }
+
+    if (!text) {
+      text = await response.text();
+    }
+
+    return text;
+  };
+
+  try {
+    const text = await runSearch(primaryKey);
+    cleanCacheIfFull();
+    jinaCache.set(cacheKey, text);
+    return text;
+  } catch (err) {
+    if (fallbackKey && fallbackKey !== primaryKey) {
+      console.warn(`[Jina Search] Primary API key failed: ${err.message}. Retrying with fallback key...`);
+      try {
+        const text = await runSearch(fallbackKey);
+        cleanCacheIfFull();
+        jinaCache.set(cacheKey, text);
+        return text;
+      } catch (fallbackErr) {
+        throw new Error(`Primary key failed (${err.message}) and fallback key failed (${fallbackErr.message})`);
+      }
+    }
+    throw err;
+  }
 }
 
 // Model mapping helper to translate Groq model names to OpenRouter equivalents
