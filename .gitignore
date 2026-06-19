@@ -5,6 +5,10 @@ node_modules/
 .env*.local
 .env.local.txt
 .env*.local.txt
+env.local
+env.local.txt
+env*.local
+env*.local.txt
 .DS_Store
 .versions_archive/
 api/version_manifest.json
