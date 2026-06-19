@@ -414,6 +414,19 @@ export default async function handler(req, res) {
       });
 
       await Promise.all(scrapePromises);
+    } else if (agentType === "growth-report") {
+      const query = `"${companyProfile.companyName}" news OR presence OR directories`.trim();
+      try {
+        console.log(`[Jina] Running search for growth-report: "${query}"`);
+        const results = await searchWeb(query, jinaApiKey);
+        if (results) {
+          searchBlocks.push(results);
+          executedTools.push("Jina Search");
+          jinaSucceeded = true;
+        }
+      } catch (err) {
+        console.error(`[Jina] Search failed for growth-report:`, err.message);
+      }
     }
   } catch (err) {
     console.error("[Jina] Major error during Jina integration flow:", err.message);

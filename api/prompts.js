@@ -229,10 +229,23 @@ Show the arithmetic: current followers, goal, weeks remaining, and required week
 
 ## Reverse Follower Growth Model
 A Markdown table with columns: Source | Weekly Follower Contribution Target | Actual This Week | Gap | Fix for Next Week.
-*Note: If any metric is not provided in the inputs, write 'Not reported'. DO NOT invent or estimate contribution target numbers or actuals.*
+*How to construct the table:*
+1. **Source**: Use standard channels: 'Founder LinkedIn Posts', 'Company Organic Posts', 'Employee Advocacy & Comments', 'GEO/ASO Search Referrals'.
+2. **Weekly Follower Contribution Target**: Calculate the required weekly net-new follower target from the Pace-to-Goal arithmetic, and allocate it across sources:
+   - Founder LinkedIn Posts: 40% of target (rounded)
+   - Company Organic Posts: 30% of target (rounded)
+   - Employee Advocacy & Comments: 20% of target (rounded)
+   - GEO/ASO Search Referrals: 10% of target (rounded)
+   State these calculated numbers explicitly as targets.
+3. **Actual This Week**: If actual metrics are not supplied in the inputs, write 'Not reported'. Do not invent actuals.
+4. **Gap**: If actual metrics are not supplied, write 'Not reported'. Otherwise, show target minus actual.
+5. **Fix for Next Week**: Provide a high-fidelity, actionable B2B growth recommendation for that source based on standard LinkedIn/search playbooks (e.g. hook optimizations, carousels, citation directories).
 
 ## Visibility Scorecard
-Provide scorecard details or qualitative/quantitative ratings for: LinkedIn visibility, founder visibility, Google visibility, AI-engine visibility, citation visibility, directory visibility, earned media, and content authority.
+Provide qualitative ratings (e.g., High, Medium, Low, or Not Found) and detailed reasoning for: LinkedIn visibility, founder visibility, Google visibility, AI-engine visibility, citation visibility, directory visibility, earned media, and content authority.
+*Grounding Instructions:*
+- Analyze the Jina search results for the company.
+- Evaluate their presence, search engine indexing, publications, and directory entries in the Jina payload to determine these ratings qualitatively. Do not write 'Not reported' for these scorecard items; use the search results as a proxy for their current visibility.
 
 ## What the Numbers Say
 3-5 observations grounded only in supplied metrics.
