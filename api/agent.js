@@ -89,7 +89,7 @@ async function scrapeUrl(url, apiKey, startTime) {
     if (key) {
       headers["Authorization"] = `Bearer ${key}`;
     }
-    const timeout = getRemainingTimeout(startTime, 4500, 3500); // 4.5s max timeout, reserve 3.5s for LLMs
+    const timeout = getRemainingTimeout(startTime, 4500, 4000); // 4.5s max timeout, reserve 4.0s for LLMs
     const response = await fetchWithTimeout(`https://r.jina.ai/${encodeURI(url)}`, { headers }, timeout);
     if (!response.ok) {
       throw new Error(`Jina Reader returned status ${response.status}`);
@@ -109,7 +109,7 @@ async function scrapeUrl(url, apiKey, startTime) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       if (process.env.VERCEL && startTime) {
         const remaining = 9500 - (Date.now() - startTime);
-        if (remaining < 3000) {
+        if (remaining < 5500) {
           console.warn(`[Jina Reader] Skipping fallback key due to low remaining time (${remaining}ms).`);
           throw err;
         }
@@ -152,7 +152,7 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
       headers["Accept"] = "application/json";
     }
 
-    const timeout = getRemainingTimeout(startTime, 4500, 3500); // 4.5s max timeout, reserve 3.5s for LLMs
+    const timeout = getRemainingTimeout(startTime, 4500, 4000); // 4.5s max timeout, reserve 4.0s for LLMs
     const response = await fetchWithTimeout(`https://s.jina.ai/${encodeURIComponent(query)}`, {
       headers
     }, timeout);
@@ -200,7 +200,7 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       if (process.env.VERCEL && startTime) {
         const remaining = 9500 - (Date.now() - startTime);
-        if (remaining < 3000) {
+        if (remaining < 5500) {
           console.warn(`[Jina Search] Skipping fallback key due to low remaining time (${remaining}ms).`);
           throw err;
         }
