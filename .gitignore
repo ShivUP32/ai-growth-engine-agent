@@ -8,3 +8,5 @@ node_modules/
 .DS_Store
 .versions_archive/
 api/version_manifest.json
+.node/
+.agents/

@@ -85,6 +85,7 @@ The app must let a user:
 15. Copy/download individual agent output.
 16. Download one combined growth-pack `.md` file.
 17. See clear error and fallback messages.
+18. Experience safe, fail-fast operations under Vercel serverless execution limits (automatic dynamic time budgeting and resource capping).
 
 ---
 
@@ -131,5 +132,7 @@ The app must let a user:
 | Follower goal is aggressive | Add reverse follower model, channel contribution targets, and weekly gap fixing. |
 | Output becomes too large | Keep per-agent sections structured, allow independent downloads, and support combined growth-pack export. |
 | Fallback model lacks web search | Show inline note requiring recency verification. |
+| Vercel Hobby server timeout (10s limit) | Implement dynamic time budgeting (9.5s max total budget limit) in the backend. When deployed on Vercel, parallel competitor queries and URL crawls are capped at 1 query/url (instead of 3 on localhost) to keep total execution duration safe. |
+| API service rate limits / exhaustion | Implement a sequential OpenRouter model fallback chain, targeting fast and robust alternatives (e.g. `google/gemini-2.5-flash`). Fallbacks are skipped if remaining budget time is low (< 2.5s) to avoid cascading timeouts. |
 
 ---
