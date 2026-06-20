@@ -29,33 +29,53 @@ flowchart TD
     A6 --> CALL
 
     CALL --> SRV[Vercel serverless function: api/agent.js]
-    SRV --> KEY[Read GROQ_API_KEY from server environment]
-    KEY --> BUILD[Build system + user prompt from api/prompts.js]
-    BUILD --> G1[Call Groq primary model]
+    SRV --> ENV[Check keys: GROQ_API_KEY, OPENROUTER_API_KEY, JINA_API_KEY]
+    ENV --> TIME[Check Remaining Timeout Budget]
+    TIME --> JINA{Jina Search/Scrape?}
+    JINA -->|Yes| G1[Call Groq Primary / Fallback Model]
+    JINA -->|No / Bypassed| G2[Call Fallback Model with note]
     G1 -->|200 OK| OUT1[Return markdown, model, executedTools]
-    G1 -->|error or 429| G2[Call Groq fallback model]
-    G2 -->|200 OK| OUT2[Return markdown, fallbackUsed true]
-    G2 -->|error| FAIL[Return 502 ok=false]
-
-    OUT1 --> UI[Render markdown into agent card]
-    OUT2 --> UI
-    FAIL --> ERRUI[Show inline error message]
+    G1 -->|error or 429 & time > 2.5s| OR[Call OpenRouter Fallback Chain: Gemini 2.5 Flash]
+    OR -->|200 OK| OUT2[Return markdown, OpenRouter model]
+    OR -->|error or low time| FAIL[Return 502 ok=false]
+    G2 -->|200 OK| OUT3[Return markdown, fallbackUsed true, note]
+    G2 -->|error & time > 2.5s| OR
 ```
 
-The browser still never talks to Groq directly. All model calls go through `/api/agent`, and the API key remains server-side only.
+The browser still never talks to Groq or OpenRouter directly. All model calls go through `/api/agent`, and API keys remain server-side only.
 
 ---
 
-## 2. Updated Model Selection
+## 2. Updated Model Selection and Fallback Chains
 
-| Agent | Primary model | Fallback model | Temp | Max tokens | Reasoning |
-|---|---|---:|---:|---:|---|
-| Market Intelligence + Share of Voice | `groq/compound` | `llama-3.3-70b-versatile` | 0.4 | 2200 | Needs public web grounding for competitors, category visibility, and citation opportunities. |
-| LinkedIn Content + Founder Growth | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | 0.7 | 2400 | Drafting-heavy. Needs high-quality natural writing and multiple variants. |
-| GEO/AEO/ASO Blog Audit | `groq/compound` | `llama-3.3-70b-versatile` | 0.4 | 2600 | Needs website/page analysis and current AI-search awareness. |
-| Growth Measurement + Forecasting | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | 0.3 | 1900 | Needs arithmetic discipline and grounded reporting. |
-| Third-Party Citation + Authority | `groq/compound` | `llama-3.3-70b-versatile` | 0.4 | 2200 | Needs current public web discovery. |
-| Conversion Asset + Repurposing | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | 0.6 | 2400 | Planning/drafting work that does not require live search unless external references are requested. |
+### Model Mapping
+
+To prevent failures when Groq limits are hit, the backend maps Groq models to OpenRouter equivalents:
+*   `llama-3.3-70b-versatile` maps to `google/gemini-2.5-flash` on OpenRouter (to optimize for response speed and rate limit resilience).
+*   `llama-3.1-8b-instant` maps to `meta-llama/llama-3.1-8b-instruct`.
+*   `mixtral-8x7b-32768` maps to `mistralai/mixtral-8x7b-instruct`.
+
+### Primary & Fallback Strategy
+
+| Agent | Primary model | Fallback model (Groq) | OpenRouter Fallback Equivalent | Temp | Max tokens | Reasoning |
+|---|---|---|---|---:|---:|---|
+| Market Intelligence + Share of Voice | `groq/compound` | `llama-3.3-70b-versatile` | `google/gemini-2.5-flash` | 0.4 | 2200 | Needs public web grounding for competitors, category visibility. |
+| LinkedIn Content + Founder Growth | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | `meta-llama/llama-3.1-8b-instruct` | 0.7 | 2400 | Drafting-heavy. Needs high-quality writing and multiple variants. |
+| GEO/AEO/ASO Blog Audit | `groq/compound` | `llama-3.3-70b-versatile` | `google/gemini-2.5-flash` | 0.4 | 2600 | Needs website/page analysis and current AI-search awareness. |
+| Growth Measurement + Forecasting | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | `meta-llama/llama-3.1-8b-instruct` | 0.3 | 1900 | Needs arithmetic discipline and grounded reporting. |
+| Third-Party Citation + Authority | `groq/compound` | `llama-3.3-70b-versatile` | `google/gemini-2.5-flash` | 0.4 | 2200 | Needs current public web discovery. |
+| Conversion Asset + Repurposing | `llama-3.3-70b-versatile` | `llama-3.1-8b-instant` | `meta-llama/llama-3.1-8b-instruct` | 0.6 | 2400 | Planning/drafting work that does not require live search. |
+
+*Note on `groq/compound`: When compounding/web-grounding is successful, the fallback model (`llama-3.3-70b-versatile`) is executed as the primary grounded runner. If grounding fails, it runs as fallback with a manual recency check warning banner.*
+
+### 2.1 Dynamic Timeout Budgeting & Crawler Concurrency Caps
+
+To prevent the Vercel serverless function from timing out on Hobby/Free plans (which have a strict 10-second cap), the backend implements the following resource constraints:
+1.  **Dynamic Timeout Budgeting (`getRemainingTimeout`)**: Total function execution time is capped at 9.5s. On Vercel, if remaining time falls below `3500ms`, the Jina fallback retry is skipped. If remaining time falls below `2500ms`, the OpenRouter fallback call is skipped. On localhost, these timeout budgets are bypassed to allow deep crawling (allowing up to 15s for crawlers, and 60s for LLM operations).
+2.  **Sequential OpenRouter Fallback Chain**: If the primary fallback model fails, a sequential fallback list of up to 4 models (`google/gemini-2.5-flash`, `google/gemini-2.5-pro`, `google/gemini-2.0-flash-exp:free`, and `meta-llama/llama-3-8b-instruct:free`) is evaluated. Retries are capped at 2 attempts, and skipped if remaining Vercel execution budget drops below `2200ms`.
+3.  **Vercel Crawler Concurrency Caps**: On Vercel, parallel searches and scrapes are restricted to prevent timeouts:
+    *   **Market Intelligence (`market-intel`)**: Caps competitor search queries at 1 (resulting in max 2 Jina queries: 1 company profile positioning query + 1 competitor query, compared to 4 on localhost).
+    *   **GEO visibility (`geo-visibility`)** & **Conversion repurposed (`conversion-repurposing`)**: Scraped URLs/assets are capped at 1 instead of 3.
 
 ---
 

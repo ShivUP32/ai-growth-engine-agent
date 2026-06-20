@@ -6,15 +6,18 @@ The environment setup remains mostly correct. Only the expanded agent scope and 
 
 ---
 
-## 1. Required Environment Variable
+## 1. Required Environment Variables
 
-Keep:
+Configure the following environment variables in Vercel under Project Settings → Environment Variables:
 
 ```text
-GROQ_API_KEY=your_groq_key_here
+GROQ_API_KEY=gsk_your_groq_key_here
+OPENROUTER_API_KEY=sk-or-v1-your_openrouter_key_here
+JINA_API_KEY=jina_your_primary_key_here
+JINA_API_KEY_FALLBACK=jina_your_fallback_key_here
 ```
 
-Do not rename it to any public/client-prefixed value such as:
+Do not rename any of these keys with public/client-prefixed prefixes such as:
 
 ```text
 NEXT_PUBLIC_GROQ_API_KEY
@@ -22,7 +25,7 @@ VITE_GROQ_API_KEY
 REACT_APP_GROQ_API_KEY
 ```
 
-Those names are unsafe in frontend frameworks because they can leak secrets into browser code.
+Frontend frameworks compile client-prefixed environment variables directly into client-side bundles, which will leak your private API keys to the browser. Keep them server-side only.
 
 ---
 
@@ -62,6 +65,22 @@ Recommended:
 ```
 
 If the plan does not allow 60 seconds, keep 30 seconds and reduce per-agent `maxCompletionTokens`.
+
+---
+
+## 3.1 Vercel Hobby Plan 10s Execution Timeout & Time Budgeting
+
+Vercel Hobby accounts enforce a strict **10-second execution time limit** per serverless request. To prevent 504 function timeouts, the `/api/agent.js` endpoint implements dynamic time budgeting:
+
+1.  **Safety Budgeting**: The code tracks elapsed time from request receipt, enforcing a strict 9.5s total time ceiling (`getRemainingTimeout` function).
+2.  **Scraper Concurrency Limits**: Scrapes and competitor queries are capped under `process.env.VERCEL` to reduce network duration:
+    *   **Market Intel (`market-intel`)**: Competitors queried are capped at 1 (max 2 queries total: company + 1 competitor).
+    *   **GEO visibility / CTAs**: URLs scraped are capped at 1.
+3.  **Low-Time Skip Rules**:
+    *   If remaining budget time drops below `3.5s` during Jina scraping/searching, fallback retry attempts for Jina are automatically skipped.
+    *   If remaining budget time drops below `2.5s`, the OpenRouter fallback model retry is skipped.
+    *   If remaining budget time drops below `2.2s`, the OpenRouter fallback chain retries (capped at 2 attempts) are skipped.
+4.  **Local Dev Bypass**: When `process.env.VERCEL` is not set (i.e. running on localhost), this timeout safety check is bypassed, allowing up to 15s for crawler/search requests and 60s for LLM operations, allowing for deep and comprehensive queries.
 
 ---
 

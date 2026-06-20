@@ -228,8 +228,8 @@ def build_pdf():
     )
     pdf.bullet(
         "Groq & OpenRouter APIs",
-        "High-velocity LLM inference. To prevent rate-limit failures, the backend implements a sequential OpenRouter "
-        "fallback chain (Gemini Free -> GPT-OSS-120B -> Nemotron 3 Nano) to resolve requests when Groq fails."
+        "High-velocity LLM inference. Under rate limits or Groq service downtime, the backend automatically "
+        "routes requests to OpenRouter equivalents (e.g., google/gemini-2.5-flash) via a multi-model fallback chain."
     )
 
     # Vercel Hobby Timeout Warning Box
@@ -249,9 +249,9 @@ def build_pdf():
     pdf.ln(1)
     
     note_text = (
-        "Due to Vercel free plan constraints of a 10-second operation timeout, the quality of "
-        "output is limited and can be elevated easily if run on local with API keys for better "
-        "quality output, bypassing Vercel's serverless execution limits."
+        "To prevent Vercel Hobby plan 10-second timeouts, the backend runs dynamic time budgeting "
+        "(9.5s max total cap) and caps Jina crawls/searches to 1 per request. Running on localhost "
+        "bypasses all timeout budgets and concurrency limits to retrieve maximum competitor details."
     )
     pdf.multi_cell(162, 4.2, note_text, new_x="LMARGIN", new_y="NEXT")
     

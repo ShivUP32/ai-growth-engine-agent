@@ -89,7 +89,7 @@ Keep the existing input style:
 │ - Copy combined pack                        │
 │ - Download combined .md                     │
 ├─────────────────────────────────────────────┤
-│ Footer: compliance note + doc links          │
+│ Footer: human review note + doc links          │
 └─────────────────────────────────────────────┘
 ```
 

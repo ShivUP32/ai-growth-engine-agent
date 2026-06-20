@@ -109,7 +109,7 @@ async function scrapeUrl(url, apiKey, startTime) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       if (process.env.VERCEL && startTime) {
         const remaining = 9500 - (Date.now() - startTime);
-        if (remaining < 5500) {
+        if (remaining < 3500) {
           console.warn(`[Jina Reader] Skipping fallback key due to low remaining time (${remaining}ms).`);
           throw err;
         }
@@ -200,7 +200,7 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
     if (fallbackKey && fallbackKey !== primaryKey) {
       if (process.env.VERCEL && startTime) {
         const remaining = 9500 - (Date.now() - startTime);
-        if (remaining < 5500) {
+        if (remaining < 3500) {
           console.warn(`[Jina Search] Skipping fallback key due to low remaining time (${remaining}ms).`);
           throw err;
         }
@@ -225,11 +225,11 @@ async function searchWeb(query, apiKey, jsonResponse = false, startTime) {
 // Model mapping helper to translate Groq model names to OpenRouter equivalents
 function getOpenRouterModel(groqModel) {
   const mappings = {
-    "llama-3.3-70b-versatile": "meta-llama/llama-3.3-70b-instruct",
+    "llama-3.3-70b-versatile": "google/gemini-2.5-flash",
     "llama-3.1-8b-instant": "meta-llama/llama-3.1-8b-instruct",
     "mixtral-8x7b-32768": "mistralai/mixtral-8x7b-instruct",
   };
-  return mappings[groqModel] || "meta-llama/llama-3.3-70b-instruct";
+  return mappings[groqModel] || "google/gemini-2.5-flash";
 }
 
 // Call OpenRouter API
@@ -557,10 +557,10 @@ export default async function handler(req, res) {
   // 2. Assemble prompt grounding context
   let groundedContext = "";
   if (scrapedPages.length > 0) {
-    groundedContext += `\n\n<scraped_web_pages>\n${scrapedPages.join("\n\n")}\n</scraped_web_pages>\n`;
+    groundedContext += `\n\n<public_references>\n${scrapedPages.join("\n\n")}\n</public_references>\n`;
   }
   if (searchBlocks.length > 0) {
-    groundedContext += `\n\n<search_results>\n${searchBlocks.join("\n\n")}\n</search_results>\n`;
+    groundedContext += `\n\n<search_context>\n${searchBlocks.join("\n\n")}\n</search_context>\n`;
   }
 
   // Layer 2 Guard: Cap total grounding context at 15,000 characters (~3,750 tokens) to protect TPM and model context limits
@@ -571,7 +571,7 @@ export default async function handler(req, res) {
   }
 
   if (groundedContext) {
-    groundedContext += `\n\n[INSTRUCTION] Analyze and incorporate the real-time search results and scraped webpage contents above into your analysis and recommendations.`;
+    groundedContext += `\n\n[INSTRUCTION] Analyze and incorporate the public reference snippets and context provided above into your analysis and recommendations.`;
   }
 
   const userPrompt = config.buildUserPrompt(companyProfile, agentInputs || {}) + groundedContext;
