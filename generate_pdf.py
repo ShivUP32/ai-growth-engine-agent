@@ -28,7 +28,7 @@ class WorkflowPDF(FPDF):
             # Horizontal rule
             self.set_draw_color(*BORDER)
             self.set_line_width(0.3)
-            self.line(20, 17, 190, 17)
+            self.line(20, 26, 190, 26)
             self.ln(4)
 
     def footer(self):
@@ -67,15 +67,23 @@ class WorkflowPDF(FPDF):
         self.ln(2.5)
 
     def bullet(self, title, desc, bullet_char="-"):
+        orig_margin = self.l_margin
+        
         self.set_text_color(*PRIMARY)
         self.set_font("Helvetica", "B", 10)
-        self.cell(6, 5, f" {bullet_char} ")
-        self.cell(45, 5, f"{title}:")
+        self.cell(8, 5, f" {bullet_char} ")
         
-        self.set_text_color(*TEXT_DARK)
+        self.set_left_margin(orig_margin + 8)
+        self.set_font("Helvetica", "B", 10)
+        self.write(5, f"{title}: ")
+        
         self.set_font("Helvetica", "", 10)
-        self.multi_cell(0, 5, desc, new_x="LMARGIN", new_y="NEXT")
-        self.ln(1.5)
+        self.set_text_color(*TEXT_DARK)
+        self.write(5, desc)
+        
+        self.ln(6.5)
+        self.set_left_margin(orig_margin)
+        self.set_x(orig_margin)
 
 def build_pdf():
     # A4 dimensions: 210 x 297 mm
@@ -397,19 +405,31 @@ def build_pdf():
         pdf.set_text_color(*TEXT_DARK)
         pdf.cell(0, 3.5, f"Primary: {primary_model}  |  Fallback: {fallback}", new_x="LMARGIN", new_y="NEXT")
         
+        # Behavior
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*PRIMARY)
         pdf.cell(20, 3.5, "Behavior:")
+        
+        pdf.set_left_margin(40)
         pdf.set_font("Helvetica", "", 8)
         pdf.set_text_color(*TEXT_DARK)
-        pdf.multi_cell(0, 3.5, behavior, new_x="LMARGIN", new_y="NEXT")
+        pdf.write(3.5, behavior)
+        pdf.ln(4.5)
+        pdf.set_left_margin(20)
+        pdf.set_x(20)
         
+        # Outputs
         pdf.set_font("Helvetica", "B", 8)
         pdf.set_text_color(*PRIMARY)
         pdf.cell(20, 3.5, "Outputs:")
+        
+        pdf.set_left_margin(40)
         pdf.set_font("Helvetica", "I", 8)
         pdf.set_text_color(*TEXT_DARK)
-        pdf.cell(0, 3.5, sections, new_x="LMARGIN", new_y="NEXT")
+        pdf.write(3.5, sections)
+        pdf.ln(4.5)
+        pdf.set_left_margin(20)
+        pdf.set_x(20)
         
         pdf.set_y(current_y + 34)
         pdf.ln(4)
