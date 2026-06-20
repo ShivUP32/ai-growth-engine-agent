@@ -18,7 +18,7 @@ class WorkflowPDF(FPDF):
             # Header title
             self.set_text_color(*PRIMARY)
             self.set_font("Helvetica", "B", 8)
-            self.cell(100, 5, "VOICECARE AI - SAFE GROWTH ENGINE")
+            self.cell(100, 5, "VOICECARE AI - GROWTH ENGINE")
             
             # Header subtitle right-aligned
             self.set_text_color(120, 130, 140)
@@ -106,7 +106,7 @@ def build_pdf():
     pdf.set_y(15)
     pdf.cell(0, 10, "VOICECARE AI", align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 12) # Muted/Normal font weight
-    pdf.cell(0, 6, "Safe Growth Operating System", align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 6, "Growth Operating System", align="C", new_x="LMARGIN", new_y="NEXT")
     
     # Title Block
     pdf.set_y(80)
@@ -117,7 +117,7 @@ def build_pdf():
     pdf.ln(5)
     pdf.set_text_color(*SECONDARY)
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 8, "Sequential Multi-Agent Framework for Safe Brand Scaling", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, "Sequential Multi-Agent Framework for Brand Scaling", new_x="LMARGIN", new_y="NEXT")
     
     # Colored Divider
     pdf.ln(4)
